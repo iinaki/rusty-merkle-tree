@@ -1,1 +1,1 @@
-# rusty-merkle-tree
+# Rusty Merkle Tree
