@@ -90,12 +90,16 @@ impl MerkleTree {
     // fn generate_proof
 }
 
-
-#[cfg(test)]
+#[cfg(test)] 
 mod test {
     use sha3::{Digest, Sha3_256};
 
     use crate::merkle_tree::MerkleTree;
+
+    pub fn bytes_to_hex(bytes: &[u8]) -> String {
+        let hex_chars: Vec<String> = bytes.iter().map(|byte| format!("{:02x}", byte)).collect();
+        hex_chars.join("")
+    }
 
     #[test]
     fn build_simple_tree() {
@@ -153,17 +157,21 @@ mod test {
             "q tal",
             "q pex",
             "qqqqq",
+            "probando",
         ];
 
         let tree = MerkleTree::new_from_hasables(data);
 
         let mut hasher = Sha3_256::new();
-        hasher.update("q pex");
+        hasher.update("probando");
         let result = hasher.finalize();
         
         let hash: [u8; 32] = result.into();
+        let hash_hex = bytes_to_hex(&hash);
+        println!("HASH: {:?}", hash_hex);
 
-        assert!(tree.verify(hash, 2));
+        assert_eq!(hash_hex, "4c8b422307ac7bdf38c2c17bab533ead4fc28d6daec176b195ef8a25a20a53e2".to_string());
+        assert!(tree.verify(hash, 4));
     }
 
     #[test]
