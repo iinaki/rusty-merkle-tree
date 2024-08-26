@@ -1,5 +1,8 @@
 use sha3::{Digest, Sha3_256};
 
+use crate::proof_of_inclusion::ProofOfInclusion;
+use crate::direction::Direction;
+
 use super::merkle_hash::MerkleHash;
 
 /// A Merkle Tree that 
@@ -65,8 +68,16 @@ impl MerkleTree {
         self.levels[self.levels.len() - 1][0].clone()
     }
 
-    /// Verifies that a given hash is contained in the Merkle Tree
-    pub fn verify(&self, leaf: MerkleHash, mut index: u32) -> bool {
+    /// Verifies that a given hash is contained in the Merkle Tree, in O(log n) time.
+    /// 
+    /// # Parameters
+    /// - `leaf`: The hash to verify
+    /// - `index`: The index of the hash in the bottom level of the tree
+    pub fn verify_with_index(&self, leaf: MerkleHash, mut index: u32) -> bool {
+        if self.levels[0][index as usize] != leaf {
+            return false;
+        }
+
         let mut computed_root = leaf;
 
         for level in self.levels.iter() {
@@ -88,6 +99,52 @@ impl MerkleTree {
         }
 
         computed_root == self.root()
+    }
+
+    /// Verifies that a given hash is contained in the Merkle Tree, in O(n) time.
+    /// 
+    /// # Parameters
+    /// - `leaf`: The hash to verify
+    pub fn verify(&self, leaf: MerkleHash) -> bool {
+        let hash_index =
+            match self.levels[0].iter().position(|h| h == &leaf) {
+                Some(index) => index,
+                None => return false
+            };
+
+        self.verify_with_index(leaf, hash_index as u32)
+    }
+
+    pub fn proof_of_inclusion(&self, leaf: MerkleHash, mut index: u32) -> Result<ProofOfInclusion, String> {
+        if self.levels[0][index as usize] != leaf {
+            return Err("Hash not found in tree".to_string());
+        }
+
+        let mut computed_root = leaf;
+        let mut proof = vec![];
+
+        for level in self.levels.iter() {
+            if level.len() == 1 {
+                break;
+            }
+
+            if index % 2 == 0 {
+                computed_root = if index + 1 < level.len() as u32 {
+                    proof.push((level[(index + 1) as usize], Direction::Right));
+                    MerkleTree::combine_hashes(computed_root, level[(index + 1) as usize])
+                } else {
+                    proof.push((computed_root, Direction::Right));
+                    MerkleTree::combine_hashes(computed_root, computed_root)
+                }
+            } else {
+                computed_root = MerkleTree::combine_hashes(level[(index - 1) as usize], computed_root);
+                proof.push((level[(index - 1) as usize], Direction::Left));
+            }
+
+            index /= 2;
+        }
+
+        Ok(proof)
     }
 
     /// Returns the hash of the given data
@@ -182,11 +239,9 @@ mod test {
         let result = hasher.finalize();
         
         let hash: [u8; 32] = result.into();
-        let hash_hex = bytes_to_hex(&hash);
         println!("HASH: {:?}", hash);
 
-        //assert_eq!(hash_hex, "4c8b422307ac7bdf38c2c17bab533ead4fc28d6daec176b195ef8a25a20a53e2".to_string());
-        assert!(tree.verify(hash, 4));
+        assert!(tree.verify_with_index(hash, 4));
     }
 
     #[test]
@@ -234,6 +289,6 @@ mod test {
         
         let hash: [u8; 32] = result.into();
 
-        assert!(tree.verify(hash, 17));
+        assert!(tree.verify_with_index(hash, 17));
     }
 }
