@@ -150,11 +150,10 @@ impl MerkleTree {
         leaf: MerkleHash,
         mut index: u32,
     ) -> Result<ProofOfInclusion, String> {
-        if self.levels[0][index as usize] != leaf {
-            return Err("Hash not found in tree".to_string());
+        if self.levels[0][index as usize] != leaf || !self.verify_with_index(leaf, index) {
+            return Err("Hash is not part of the tree".to_string());
         }
 
-        let mut computed_root = leaf;
         let mut proof = vec![];
 
         for level in self.levels.iter() {
@@ -163,16 +162,12 @@ impl MerkleTree {
             }
 
             if index % 2 == 0 {
-                computed_root = if index + 1 < level.len() as u32 {
+                if index + 1 < level.len() as u32 {
                     proof.push((level[(index + 1) as usize], Direction::Right));
-                    MerkleTree::combine_hashes(computed_root, level[(index + 1) as usize])
                 } else {
-                    proof.push((computed_root, Direction::Right));
-                    MerkleTree::combine_hashes(computed_root, computed_root)
+                    proof.push((level[index as usize], Direction::Right));
                 }
             } else {
-                computed_root =
-                    MerkleTree::combine_hashes(level[(index - 1) as usize], computed_root);
                 proof.push((level[(index - 1) as usize], Direction::Left));
             }
 
@@ -358,5 +353,50 @@ mod test {
         let proof = tree.proof_of_inclusion(hash).unwrap();
 
         proof.print();
+    }
+
+    #[test]
+    #[should_panic]
+    fn verify_proof_of_inclusion_fails() {
+        let data = vec![
+            "something00",
+            "something01",
+            "something02",
+            "something03",
+            "something04",
+            "something05",
+            "something06",
+            "something07",
+            "something08",
+            "something09",
+            "something010",
+            "something011",
+            "something012",
+            "something013",
+            "something014",
+            "something015",
+            "something016",
+            "something017",
+            "something018",
+            "something019",
+            "something020",
+            "something021",
+            "something022",
+            "something023",
+            "something024",
+            "something025",
+            "something026",
+            "something027",
+            "something028",
+            "something029",
+            "something030",
+            "something031",
+        ];
+
+        let tree = MerkleTree::new_from_hasables(data);
+
+        let hash = tree.get_hash_of(&"not in the tree");
+
+        let _proof = tree.proof_of_inclusion(hash).unwrap();
     }
 }
