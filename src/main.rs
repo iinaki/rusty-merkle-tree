@@ -21,6 +21,15 @@ pub fn manage_input(commands: Vec<&str>, running: &mut bool, tree: &mut MerkleTr
         "show" => {
             tree.print();
         }
+        "verify" => {
+            handle_verify_inclusion(commands, tree);
+        }
+        "proof" => {
+            handle_proof_of_inclusion(commands, tree);
+        }
+        "add" => {
+            handle_add_element(commands, tree);
+        }
         _ => {
             println!("Invalid command. Type 'help' to see the list of commands.");
         }
