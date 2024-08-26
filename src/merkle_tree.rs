@@ -1,3 +1,5 @@
+use std::io::Cursor;
+
 use sha3::{Digest, Sha3_256};
 
 use crate::direction::Direction;
@@ -13,6 +15,7 @@ use super::merkle_hash::MerkleHash;
 /// - `root`: Returns the root of the Merkle Tree, which is the Merkle Root.
 /// - `verify`: Verifies that a given hash is contained in the Merkle Tree.
 /// - `proof_of_inclusion`: Returns a proof of inclusion for a given hash in the Merkle Tree.
+#[derive(Debug)]
 pub struct MerkleTree {
     levels: Vec<Vec<MerkleHash>>,
 }
@@ -130,7 +133,7 @@ impl MerkleTree {
     ///
     /// # Parameters
     /// - `data`: An object that can be converted to a byte slice
-    pub fn get_hash_of(&self, data: &impl AsRef<[u8]>) -> MerkleHash {
+    pub fn get_hash_of(data: &impl AsRef<[u8]>) -> MerkleHash {
         let mut hasher = Sha3_256::new();
         hasher.update(data);
         let result = hasher.finalize();
@@ -191,6 +194,21 @@ impl MerkleTree {
         };
 
         self.proof_of_inclusion_with_index(leaf, hash_index as u32)
+    }
+
+    /// Adds a hash to the Merkle Tree, updating the tree structure.
+    /// 
+    /// # Parameters
+    /// - `hash`: The hash to add to the tree
+    pub fn add_hash(&mut self, hash: MerkleHash) {
+        let mut bottom_level = self.levels[0].clone();
+        bottom_level.push(hash);
+
+        let mut new_tree = MerkleTree { levels: vec![] };
+
+        MerkleTree::build_tree(&mut new_tree, bottom_level);
+
+        self.levels = new_tree.levels;
     }
 }
 
@@ -310,7 +328,7 @@ mod test {
     }
 
     #[test]
-    fn verify_proof_of_inclusion_in_big_tree_from_strings() {
+    fn proof_of_inclusion_in_big_tree_from_strings() {
         let data = vec![
             "something00",
             "something01",
@@ -348,7 +366,7 @@ mod test {
 
         let tree = MerkleTree::new_from_hasables(data);
 
-        let hash = tree.get_hash_of(&"something017");
+        let hash = MerkleTree::get_hash_of(&"something017");
 
         let proof = tree.proof_of_inclusion(hash).unwrap();
 
@@ -357,7 +375,7 @@ mod test {
 
     #[test]
     #[should_panic]
-    fn verify_proof_of_inclusion_fails() {
+    fn proof_of_inclusion_fails() {
         let data = vec![
             "something00",
             "something01",
@@ -395,8 +413,43 @@ mod test {
 
         let tree = MerkleTree::new_from_hasables(data);
 
-        let hash = tree.get_hash_of(&"not in the tree");
+        let hash = MerkleTree::get_hash_of(&"not in the tree");
 
         let _proof = tree.proof_of_inclusion(hash).unwrap();
+    }
+
+    #[test]
+    fn add_to_tree() {
+        let data = vec![
+            "something00",
+            "something01",
+            "something02",
+            "something03",
+            "something04",
+            "something05",
+            "something06",
+            "something07",
+            "something08",
+            "something09",
+            "something010",
+            "something011",
+            "something012",
+            "something013",
+            "something014",
+            "something015",
+            "something016",
+        ];
+
+        let mut tree = MerkleTree::new_from_hasables(data);
+        println!("TREE BEFORE ADDING: {:?}", tree);
+
+        let new_data = MerkleTree::get_hash_of(&"something099");
+        tree.add_hash(new_data);
+
+        assert!(tree.verify(new_data));
+
+        let proof = tree.proof_of_inclusion(new_data).unwrap();
+        println!("PROOF OF ADDED:");
+        proof.print();
     }
 }
