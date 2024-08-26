@@ -67,10 +67,8 @@ impl MerkleTree {
     fn combine_hashes(left: MerkleHash, right: MerkleHash) -> MerkleHash {
         left.to_vec().extend_from_slice(&right);
 
-        let mut cobined = left.clone();
-
         let mut hasher = Sha3_256::new();
-        hasher.update(&mut cobined);
+        hasher.update(left);
         let result = hasher.finalize();
 
         result.into()
@@ -78,7 +76,7 @@ impl MerkleTree {
 
     /// Returns the root of the Merkle Tree, which is the Merkle Root.
     pub fn root(&self) -> MerkleHash {
-        self.levels[self.levels.len() - 1][0].clone()
+        self.levels[self.levels.len() - 1][0]
     }
 
     /// Verifies that a given hash is contained in the Merkle Tree, in O(log n) time, with n = number of leaf hashes.
