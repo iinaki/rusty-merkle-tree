@@ -1,5 +1,3 @@
-use std::io::Cursor;
-
 use sha3::{Digest, Sha3_256};
 
 use crate::direction::Direction;
@@ -203,7 +201,7 @@ impl MerkleTree {
     }
 
     /// Adds a hash to the Merkle Tree, updating the tree structure.
-    /// 
+    ///
     /// # Parameters
     /// - `hash`: The hash to add to the tree
     pub fn add_hash(&mut self, hash: MerkleHash) {
@@ -213,7 +211,7 @@ impl MerkleTree {
         } else {
             self.levels[0].push(hash);
         }
-        
+
         let mut new_tree = MerkleTree { levels: vec![] };
 
         MerkleTree::build_tree(&mut new_tree, self.levels[0].clone());
