@@ -116,6 +116,17 @@ impl MerkleTree {
         self.verify_with_index(leaf, hash_index as u32)
     }
 
+    /// Returns the hash of the given data
+    /// 
+    /// # Parameters
+    /// - `data`: An object that can be converted to a byte slice
+    pub fn get_hash_of(&self, data: &impl AsRef<[u8]>) -> MerkleHash {
+        let mut hasher = Sha3_256::new();
+        hasher.update(data);
+        let result = hasher.finalize();
+        result.into()
+    }
+
     /// Returns a proof of inclusion for a given hash in the Merkle Tree. The proof generated conains the hashes of the siblings of the nodes in the path from the leaf to the root, and their directions. In O(log n) time, with n = number of leaf hashes..
     /// 
     /// # Parameters
@@ -153,7 +164,7 @@ impl MerkleTree {
             index /= 2;
         }
 
-        Ok(proof)
+        Ok(ProofOfInclusion::new_from(leaf, proof))
     }
 
     /// Returns a proof of inclusion for a given hash in the Merkle Tree. The proof generated conains the hashes of the siblings of the nodes in the path from the leaf to the root, and their directions. In O(n) time, with n = number of leaf hashes.
@@ -171,28 +182,6 @@ impl MerkleTree {
             };
 
         self.proof_of_inclusion_with_index(leaf, hash_index as u32)
-    }
-
-    fn bytes_to_hex(bytes: &[u8]) -> String {
-        let hex_chars: Vec<String> = bytes.iter().map(|byte| format!("{:02x}", byte)).collect();
-        hex_chars.join("")
-    }
-
-    pub fn print_proof(proof: ProofOfInclusion) {
-        for (hash, direction) in proof {
-            println!("Hash: {:?}, Direction: {:?}", MerkleTree::bytes_to_hex(&hash), direction);
-        }
-    }
-
-    /// Returns the hash of the given data
-    /// 
-    /// # Parameters
-    /// - `data`: An object that can be converted to a byte slice
-    pub fn get_hash_of(&self, data: &impl AsRef<[u8]>) -> MerkleHash {
-        let mut hasher = Sha3_256::new();
-        hasher.update(data);
-        let result = hasher.finalize();
-        result.into()
     }
 }
 
@@ -365,6 +354,6 @@ mod test {
 
         let proof = tree.proof_of_inclusion(hash).unwrap();
 
-        MerkleTree::print_proof(proof);
+        proof.print();
     }
 }
