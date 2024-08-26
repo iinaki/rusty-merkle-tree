@@ -18,6 +18,7 @@ impl MerkleTree {
         tree
     }
 
+    /// Creates a new MerkleTree from a list of objects that can be converted to byte slices (== that are hashable).
     pub fn new_from_hasables(data: Vec<impl AsRef<[u8]>>) -> MerkleTree {
         let hashes = data.iter().map(|d| {
             let mut hasher = Sha3_256::new();
@@ -68,7 +69,7 @@ impl MerkleTree {
         self.levels[self.levels.len() - 1][0].clone()
     }
 
-    /// Verifies that a given hash is contained in the Merkle Tree, in O(log n) time.
+    /// Verifies that a given hash is contained in the Merkle Tree, in O(log n) time, with n = number of leaf hashes.
     /// 
     /// # Parameters
     /// - `leaf`: The hash to verify
@@ -101,7 +102,7 @@ impl MerkleTree {
         computed_root == self.root()
     }
 
-    /// Verifies that a given hash is contained in the Merkle Tree, in O(n) time.
+    /// Verifies that a given hash is contained in the Merkle Tree, in O(n) time, with n = number of leaf hashes.
     /// 
     /// # Parameters
     /// - `leaf`: The hash to verify
@@ -115,7 +116,15 @@ impl MerkleTree {
         self.verify_with_index(leaf, hash_index as u32)
     }
 
-    pub fn proof_of_inclusion(&self, leaf: MerkleHash, mut index: u32) -> Result<ProofOfInclusion, String> {
+    /// Returns a proof of inclusion for a given hash in the Merkle Tree. The proof generated conains the hashes of the siblings of the nodes in the path from the leaf to the root, and their directions. In O(log n) time, with n = number of leaf hashes..
+    /// 
+    /// # Parameters
+    /// - `leaf`: The hash to generate the proof for
+    /// - `index`: The index of the hash in the bottom level of the tree
+    /// 
+    /// # Returns
+    /// A Result that, if the hash given is included in the tree, contains a `ProofOfInclusion` containing the proof of inclusion for the given hash. If the hash is not included in the tree, an error message is returned.
+    pub fn proof_of_inclusion_with_index(&self, leaf: MerkleHash, mut index: u32) -> Result<ProofOfInclusion, String> {
         if self.levels[0][index as usize] != leaf {
             return Err("Hash not found in tree".to_string());
         }
@@ -147,6 +156,34 @@ impl MerkleTree {
         Ok(proof)
     }
 
+    /// Returns a proof of inclusion for a given hash in the Merkle Tree. The proof generated conains the hashes of the siblings of the nodes in the path from the leaf to the root, and their directions. In O(n) time, with n = number of leaf hashes.
+    /// 
+    /// # Parameters
+    /// - `leaf`: The hash to generate the proof for
+    /// 
+    /// # Returns
+    /// A Result that, if the hash given is included in the tree, contains a `ProofOfInclusion` containing the proof of inclusion for the given hash. If the hash is not included in the tree, an error message is returned.
+    pub fn proof_of_inclusion(&self, leaf: MerkleHash) -> Result<ProofOfInclusion, String> {
+        let hash_index =
+            match self.levels[0].iter().position(|h| h == &leaf) {
+                Some(index) => index,
+                None => return Err("Hash not found in tree".to_string())
+            };
+
+        self.proof_of_inclusion_with_index(leaf, hash_index as u32)
+    }
+
+    fn bytes_to_hex(bytes: &[u8]) -> String {
+        let hex_chars: Vec<String> = bytes.iter().map(|byte| format!("{:02x}", byte)).collect();
+        hex_chars.join("")
+    }
+
+    pub fn print_proof(proof: ProofOfInclusion) {
+        for (hash, direction) in proof {
+            println!("Hash: {:?}, Direction: {:?}", MerkleTree::bytes_to_hex(&hash), direction);
+        }
+    }
+
     /// Returns the hash of the given data
     /// 
     /// # Parameters
@@ -157,9 +194,6 @@ impl MerkleTree {
         let result = hasher.finalize();
         result.into()
     }
-
-    // path to the leaf node
-    // fn generate_proof
 }
 
 #[cfg(test)] 
@@ -167,11 +201,6 @@ mod test {
     use sha3::{Digest, Sha3_256};
 
     use crate::merkle_tree::MerkleTree;
-
-    pub fn bytes_to_hex(bytes: &[u8]) -> String {
-        let hex_chars: Vec<String> = bytes.iter().map(|byte| format!("{:02x}", byte)).collect();
-        hex_chars.join("")
-    }
 
     #[test]
     fn build_simple_tree() {
@@ -204,10 +233,11 @@ mod test {
     #[test]
     fn build_simple_tree_from_strings() {
         let data = vec![
-            "q onda",
-            "q tal",
-            "q pex",
-            "qqqqq",
+            "something00",
+            "something01",
+            "something02",
+            "something03",
+            "something04",
         ];
 
         let tree = MerkleTree::new_from_hasables(data);
@@ -225,17 +255,17 @@ mod test {
     #[test]
     fn verify_inclusion_in_simple_tree_from_strings() {
         let data = vec![
-            "q onda",
-            "q tal",
-            "q pex",
-            "qqqqq",
-            "probando",
+            "something00",
+            "something01",
+            "something02",
+            "something03",
+            "something04",
         ];
 
         let tree = MerkleTree::new_from_hasables(data);
 
         let mut hasher = Sha3_256::new();
-        hasher.update("probando");
+        hasher.update("something04");
         let result = hasher.finalize();
         
         let hash: [u8; 32] = result.into();
@@ -247,48 +277,94 @@ mod test {
     #[test]
     fn verify_inclusion_in_big_tree_from_strings() {
         let data = vec![
-            "q onda0",
-            "q onda1",
-            "q onda2",
-            "q onda3",
-            "q onda4",
-            "q onda5",
-            "q onda6",
-            "q onda7",
-            "q onda8",
-            "q onda9",
-            "q onda10",
-            "q onda11",
-            "q onda12",
-            "q onda13",
-            "q onda14",
-            "q onda15",
-            "q onda16",
-            "q onda17",
-            "q onda18",
-            "q onda19",
-            "q onda20",
-            "q onda21",
-            "q onda22",
-            "q onda23",
-            "q onda24",
-            "q onda25",
-            "q onda26",
-            "q onda27",
-            "q onda28",
-            "q onda29",
-            "q onda30",
-            "q onda31",
+            "something00",
+            "something01",
+            "something02",
+            "something03",
+            "something04",
+            "something05",
+            "something06",
+            "something07",
+            "something08",
+            "something09",
+            "something010",
+            "something011",
+            "something012",
+            "something013",
+            "something014",
+            "something015",
+            "something016",
+            "something017",
+            "something018",
+            "something019",
+            "something020",
+            "something021",
+            "something022",
+            "something023",
+            "something024",
+            "something025",
+            "something026",
+            "something027",
+            "something028",
+            "something029",
+            "something030",
+            "something031",
         ];
 
         let tree = MerkleTree::new_from_hasables(data);
 
         let mut hasher = Sha3_256::new();
-        hasher.update("q onda17");
+        hasher.update("something017");
         let result = hasher.finalize();
         
         let hash: [u8; 32] = result.into();
 
         assert!(tree.verify_with_index(hash, 17));
+    }
+
+    #[test]
+    fn verify_proof_of_inclusion_in_big_tree_from_strings() {
+        let data = vec![
+            "something00",
+            "something01",
+            "something02",
+            "something03",
+            "something04",
+            "something05",
+            "something06",
+            "something07",
+            "something08",
+            "something09",
+            "something010",
+            "something011",
+            "something012",
+            "something013",
+            "something014",
+            "something015",
+            "something016",
+            "something017",
+            "something018",
+            "something019",
+            "something020",
+            "something021",
+            "something022",
+            "something023",
+            "something024",
+            "something025",
+            "something026",
+            "something027",
+            "something028",
+            "something029",
+            "something030",
+            "something031",
+        ];
+
+        let tree = MerkleTree::new_from_hasables(data);
+
+        let hash = tree.get_hash_of(&"something017");
+
+        let proof = tree.proof_of_inclusion(hash).unwrap();
+
+        MerkleTree::print_proof(proof);
     }
 }
