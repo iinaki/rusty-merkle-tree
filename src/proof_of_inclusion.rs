@@ -10,7 +10,7 @@ impl ProofOfInclusion {
         ProofOfInclusion { leaf, proof }
     }
 
-    fn bytes_to_hex(bytes: &[u8]) -> String {
+    pub fn bytes_to_hex(bytes: &[u8]) -> String {
         let hex_chars: Vec<String> = bytes.iter().map(|byte| format!("{:02x}", byte)).collect();
         hex_chars.join("")
     }

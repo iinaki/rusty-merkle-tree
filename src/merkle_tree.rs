@@ -44,12 +44,18 @@ impl MerkleTree {
     }
 
     /// Recursive function that builds the Merkle Tree from a list of hashes.
-    fn build_tree(tree: &mut MerkleTree, hashes: Vec<MerkleHash>) {
-        tree.levels.push(hashes.clone());
-
+    fn build_tree(tree: &mut MerkleTree, mut hashes: Vec<MerkleHash>) {
         if hashes.len() == 1 {
+            tree.levels.push(hashes.clone());
             return;
         }
+
+        if hashes.len() % 2 != 0 {
+            let last = &hashes[hashes.len() - 1];
+            hashes.push(last.clone());
+        }
+
+        tree.levels.push(hashes.clone());
 
         let mut next_hashes = vec![];
         for i in (0..hashes.len()).step_by(2) {
@@ -201,14 +207,28 @@ impl MerkleTree {
     /// # Parameters
     /// - `hash`: The hash to add to the tree
     pub fn add_hash(&mut self, hash: MerkleHash) {
-        let mut bottom_level = self.levels[0].clone();
-        bottom_level.push(hash);
-
+        let len = self.levels[0].len();
+        if self.levels[0][len - 1] == self.levels[0][len - 2] {
+            self.levels[0][len - 1] = hash;
+        } else {
+            self.levels[0].push(hash);
+        }
+        
         let mut new_tree = MerkleTree { levels: vec![] };
 
-        MerkleTree::build_tree(&mut new_tree, bottom_level);
+        MerkleTree::build_tree(&mut new_tree, self.levels[0].clone());
 
         self.levels = new_tree.levels;
+    }
+
+    /// Prints the Merkle Tree structure.
+    pub fn print(&self) {
+        for i in 0..self.levels.len() {
+            println!("LEVEL {}:", i);
+            for hash in self.levels[i].iter() {
+                println!("- {:?}", ProofOfInclusion::bytes_to_hex(hash));
+            }
+        }
     }
 }
 
@@ -247,9 +267,7 @@ mod test {
 
         let tree = MerkleTree::new_from_hasables(data);
 
-        println!("LEVEL 1: {:?}", tree.levels[0]);
-        println!("LEVEL 2: {:?}", tree.levels[1]);
-        println!("LEVEL 3: {:?}", tree.levels[2]);
+        tree.print();
 
         assert_eq!(tree.levels.len(), 3);
         assert_eq!(tree.levels[0].len(), 4);
@@ -269,14 +287,11 @@ mod test {
 
         let tree = MerkleTree::new_from_hasables(data);
 
-        let mut hasher = Sha3_256::new();
-        hasher.update("something04");
-        let result = hasher.finalize();
-
-        let hash: [u8; 32] = result.into();
+        let hash = MerkleTree::get_hash_of(&"something04");
         println!("HASH: {:?}", hash);
 
         assert!(tree.verify_with_index(hash, 4));
+        tree.print()
     }
 
     #[test]
@@ -325,6 +340,8 @@ mod test {
         let hash: [u8; 32] = result.into();
 
         assert!(tree.verify_with_index(hash, 17));
+
+        tree.print()
     }
 
     #[test]
@@ -441,7 +458,8 @@ mod test {
         ];
 
         let mut tree = MerkleTree::new_from_hasables(data);
-        println!("TREE BEFORE ADDING: {:?}", tree);
+        println!("TREE BEFORE ADDING:");
+        tree.print();
 
         let new_data = MerkleTree::get_hash_of(&"something099");
         tree.add_hash(new_data);
@@ -451,5 +469,8 @@ mod test {
         let proof = tree.proof_of_inclusion(new_data).unwrap();
         println!("PROOF OF ADDED:");
         proof.print();
+
+        println!("TREE AFTER ADDING:");
+        tree.print()
     }
 }
