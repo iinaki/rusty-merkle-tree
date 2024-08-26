@@ -16,9 +16,16 @@ impl ProofOfInclusion {
     }
 
     pub fn print(self) {
-        println!("Proof of Inclusion for the leaf: {:?}", ProofOfInclusion::bytes_to_hex(&self.leaf));
+        println!(
+            "Proof of Inclusion for the leaf: {:?}",
+            ProofOfInclusion::bytes_to_hex(&self.leaf)
+        );
         for (hash, direction) in self.proof {
-            println!("{:?} - {:?}",ProofOfInclusion:: bytes_to_hex(&hash), direction);
+            println!(
+                "{:?} - {:?}",
+                ProofOfInclusion::bytes_to_hex(&hash),
+                direction
+            );
         }
     }
 }

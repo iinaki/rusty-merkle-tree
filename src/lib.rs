@@ -1,4 +1,4 @@
-pub mod merkle_tree;
-mod merkle_hash;
-mod proof_of_inclusion;
 mod direction;
+mod merkle_hash;
+pub mod merkle_tree;
+mod proof_of_inclusion;
