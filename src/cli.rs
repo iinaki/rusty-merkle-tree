@@ -6,6 +6,12 @@ pub struct CLI {
     tree: MerkleTree,
 }
 
+impl Default for CLI {
+    fn default() -> Self {
+        Self::new()
+    }
+}
+
 impl CLI {
     pub fn new() -> Self {
         CLI {
@@ -44,27 +50,22 @@ impl CLI {
     }
 
     fn print_help() {
-        println!("COMMANDS");
+        println!("COMMANDS \n");
         println!("-- CREATE --");
         println!("create <path/to/elements.txt> <-h>");
-        println!("- Creates a new Merkle Tree from a file with elements. If the -h flag is present, the elements are hashed before being added to the tree.");
-        println!("");
+        println!("- Creates a new Merkle Tree from a file with elements. If the -h flag is present, the elements are hashed before being added to the tree. \n");
         println!("-- SHOW --");
         println!("show");
-        println!("- Shows the current state of the Merkle Tree.");
-        println!("");
+        println!("- Shows the current state of the Merkle Tree. \n");
         println!("-- VERIFY --");
         println!("verify <element>");
-        println!("- Verifies if an element is included in the tree.");
-        println!("");
+        println!("- Verifies if an element is included in the tree. \n");
         println!("-- PROOF --");
         println!("proof <element>");
-        println!("- Shows the proof of inclusion for an element.");
-        println!("");
+        println!("- Shows the proof of inclusion for an element. \n");
         println!("-- ADD --");
         println!("add <element> <-h>");
-        println!("- Adds an element to the tree. If the -h flag is present, the element is hashed before being added to the tree.");
-        println!("");
+        println!("- Adds an element to the tree. If the -h flag is present, the element is hashed before being added to the tree. \n");
         println!("-- EXIT --");
         println!("exit");
         println!("- Exits the program.")
@@ -151,7 +152,7 @@ impl CLI {
         let element = commands[1];
 
         if commands.len() == 3 && commands[2] == "-h" {
-            self.tree.add_data(element.to_string());
+            self.tree.add_data(element);
         } else {
             self.tree.add_hash(element.to_string());
         }
