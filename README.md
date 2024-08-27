@@ -16,6 +16,10 @@ By running the program you will enter the interactive CLI. To view the available
 - `add <element> <-h>`, adds a new element to the Merkle Tree, if the -h flag is passed the element will be hashed before being added to the tree.
 - `exit`, exits the program.
 
+To create a Merkle Tree you have to pass the program a file with the hashes/elements that you want te tree to store, I've included two files in the examples directory, one with hashes and one with strings for you to test.
+
+The program doesn't check wheather the hashes are valid or not, it assumes that the hashes are valid SHA256.
+
 ### Merkle Proof of Inclusion
 Merkle proofs are used to decide upon the following factors:
 
