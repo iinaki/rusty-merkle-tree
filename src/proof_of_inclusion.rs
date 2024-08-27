@@ -11,16 +11,9 @@ impl ProofOfInclusion {
     }
 
     pub fn print(self) {
-        println!(
-            "Proof of Inclusion for the leaf: {:?}",
-            &self.leaf
-        );
+        println!("Proof of Inclusion for the leaf: {:?}", &self.leaf);
         for (hash, direction) in self.proof {
-            println!(
-                "{:?} - {:?}",
-                hash,
-                direction
-            );
+            println!("{:?} - {:?}", hash, direction);
         }
     }
 }
