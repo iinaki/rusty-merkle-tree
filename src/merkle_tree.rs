@@ -219,6 +219,12 @@ impl MerkleTree {
         self.levels = new_tree.levels;
     }
 
+    /// Adds an element that will be hashed before adding it to the Merkle Tree, .
+    pub fn add_data(&mut self, data: impl AsRef<[u8]>) {
+        let hash = MerkleTree::get_hash_of(&data);
+        self.add_hash(hash);
+    }
+
     pub fn bytes_to_hex(bytes: &[u8]) -> String {
         let hex_chars: Vec<String> = bytes.iter().map(|byte| format!("{:02x}", byte)).collect();
         hex_chars.join("")

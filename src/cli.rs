@@ -19,11 +19,7 @@ impl CLI {
                 *running = false;
             }
             "help" => {
-                println!("Commands:");
-                println!("exit - Exit the program");
-                println!(
-                    "create <path/to/elements.txt> - Create a new Merkle Tree from a file of elements"
-                );
+                CLI::print_help();
             }
             "create" => {
                 self.handle_create_tree(commands);
@@ -44,6 +40,33 @@ impl CLI {
                 println!("Invalid command. Type 'help' to see the list of commands.");
             }
         }
+    }
+
+    fn print_help() {
+        println!("COMMANDS");
+        println!("-- CREATE --");
+        println!("create <path/to/elements.txt> <-h>");
+        println!("- Creates a new Merkle Tree from a file with elements. If the -h flag is present, the elements are hashed before being added to the tree.");
+        println!("");
+        println!("-- SHOW --");
+        println!("show");
+        println!("- Shows the current state of the Merkle Tree.");
+        println!("");
+        println!("-- VERIFY --");
+        println!("verify <element>");
+        println!("- Verifies if an element is included in the tree.");
+        println!("");
+        println!("-- PROOF --");
+        println!("proof <element>");
+        println!("- Shows the proof of inclusion for an element.");
+        println!("");
+        println!("-- ADD --");
+        println!("add <element> <-h>");
+        println!("- Adds an element to the tree. If the -h flag is present, the element is hashed before being added to the tree.");
+        println!("");
+        println!("-- EXIT --");
+        println!("exit");
+        println!("- Exits the program.")
     }
 
     fn handle_create_tree(&mut self, commands: Vec<&str>) {
