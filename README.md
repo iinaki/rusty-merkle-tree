@@ -1,5 +1,17 @@
 # Rusty Merkle Tree
 
+### How to run
+- Clone the repository with git clone
+- Enter the directory containing the Merkle Tree files and run `cargo run`
+
+### How to use
+By running the program you will enter the interactive CLI. To view the available commands type `help`, they are:
+- `create <path/to/elements.txt> <-h>`, creates a new Merkle Tree from the elements in the file, it is assumed that the elements in the file are hashed, if the -h flag is passed the elements will be hashed before being added to the tree.
+- `show`, displays the current Merkle Tree.
+- `verify <element>`, verifies if the given element is present in the Merkle Tree.
+- `proof <element>`, generates a proof of inclusion for the given element.
+- `add <element> <-h>`, adds a new element to the Merkle Tree, if the -h flag is passed the element will be hashed before being added to the tree.
+- `exit`, exits the program.
 
 ### Merkle Proof of Inclusion
 Merkle proofs are used to decide upon the following factors:
