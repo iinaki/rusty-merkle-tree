@@ -61,6 +61,21 @@ pub fn handle_create_tree(commands: Vec<&str>, tree: &mut MerkleTree) {
     );
 }
 
+pub fn handle_verify_inclusion(commands: Vec<&str>, tree: &MerkleTree) {
+    if commands.len() != 2 {
+        println!("Invalid number of arguments. Usage: verify <element>");
+        return;
+    }
+
+    let element = commands[1];
+
+    if tree.verify(element.to_string()) {
+        println!("{:?} is included in the tree.", element);
+    } else {
+        println!("{:?} is not included in the tree.", element);
+    }
+}
+
 fn main() {
     // read file with hashes, get file path from user
     // console-based menu that lets user:
@@ -83,12 +98,7 @@ fn main() {
         };
 
         input = input.trim().to_string();
-
-        let delimiter = " ";
-
-        let commands: Vec<&str> = input.split(&delimiter).collect();
-
-        println!("Commands: {:?}", commands);
+        let commands: Vec<&str> = input.split(&" ").collect();
 
         manage_input(commands, &mut running, &mut tree);
 

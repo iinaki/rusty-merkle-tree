@@ -34,7 +34,7 @@ impl MerkleTree {
                 let mut hasher = Sha3_256::new();
                 hasher.update(d);
                 let result = hasher.finalize();
-                result.into()
+                MerkleTree::bytes_to_hex(&result)
             })
             .collect();
 
@@ -57,11 +57,11 @@ impl MerkleTree {
 
         let mut next_hashes = vec![];
         for i in (0..hashes.len()).step_by(2) {
-            let left = hashes[i];
+            let left = hashes[i].clone();
             let right = if i + 1 < hashes.len() {
-                hashes[i + 1]
+                hashes[i + 1].clone()
             } else {
-                left
+                left.clone()
             };
 
             next_hashes.push(MerkleTree::combine_hashes(left, right));
@@ -71,19 +71,19 @@ impl MerkleTree {
     }
 
     /// Concatenates two hashes and returns the hash of the concatenation.
-    fn combine_hashes(left: MerkleHash, right: MerkleHash) -> MerkleHash {
-        left.to_vec().extend_from_slice(&right);
+    fn combine_hashes(mut left: MerkleHash, right: MerkleHash) -> MerkleHash {
+        left = left + &right;
 
         let mut hasher = Sha3_256::new();
         hasher.update(left);
         let result = hasher.finalize();
 
-        result.into()
+        MerkleTree::bytes_to_hex(&result)
     }
 
     /// Returns the root of the Merkle Tree, which is the Merkle Root.
     pub fn root(&self) -> MerkleHash {
-        self.levels[self.levels.len() - 1][0]
+        self.levels[self.levels.len() - 1][0].clone()
     }
 
     /// Verifies that a given hash is contained in the Merkle Tree, in O(log n) time, with n = number of leaf hashes.
@@ -105,13 +105,13 @@ impl MerkleTree {
 
             if index % 2 == 0 {
                 computed_root = if index + 1 < level.len() as u32 {
-                    MerkleTree::combine_hashes(computed_root, level[(index + 1) as usize])
+                    MerkleTree::combine_hashes(computed_root, level[(index + 1) as usize].clone())
                 } else {
-                    MerkleTree::combine_hashes(computed_root, computed_root)
+                    MerkleTree::combine_hashes(computed_root.clone(), computed_root.clone())
                 }
             } else {
                 computed_root =
-                    MerkleTree::combine_hashes(level[(index - 1) as usize], computed_root);
+                    MerkleTree::combine_hashes(level[(index - 1) as usize].clone(), computed_root);
             }
 
             index /= 2;
@@ -141,7 +141,7 @@ impl MerkleTree {
         let mut hasher = Sha3_256::new();
         hasher.update(data);
         let result = hasher.finalize();
-        result.into()
+        MerkleTree::bytes_to_hex(&result)
     }
 
     /// Returns a proof of inclusion for a given hash in the Merkle Tree. The proof generated conains the hashes of the siblings of the nodes in the path from the leaf to the root, and their directions. In O(log n) time, with n = number of leaf hashes..
@@ -157,7 +157,7 @@ impl MerkleTree {
         leaf: MerkleHash,
         mut index: u32,
     ) -> Result<ProofOfInclusion, String> {
-        if self.levels[0][index as usize] != leaf || !self.verify_with_index(leaf, index) {
+        if self.levels[0][index as usize] != leaf || !self.verify_with_index(leaf.clone(), index) {
             return Err("Hash is not part of the tree".to_string());
         }
 
@@ -170,12 +170,12 @@ impl MerkleTree {
 
             if index % 2 == 0 {
                 if index + 1 < level.len() as u32 {
-                    proof.push((level[(index + 1) as usize], Direction::Right));
+                    proof.push((level[(index + 1) as usize].clone(), Direction::Right));
                 } else {
-                    proof.push((level[index as usize], Direction::Right));
+                    proof.push((level[index as usize].clone(), Direction::Right));
                 }
             } else {
-                proof.push((level[(index - 1) as usize], Direction::Left));
+                proof.push((level[(index - 1) as usize].clone(), Direction::Left));
             }
 
             index /= 2;
@@ -219,12 +219,17 @@ impl MerkleTree {
         self.levels = new_tree.levels;
     }
 
+    pub fn bytes_to_hex(bytes: &[u8]) -> String {
+        let hex_chars: Vec<String> = bytes.iter().map(|byte| format!("{:02x}", byte)).collect();
+        hex_chars.join("")
+    }
+
     /// Prints the Merkle Tree structure.
     pub fn print(&self) {
         for i in 0..self.levels.len() {
             println!("LEVEL {}:", i);
             for hash in self.levels[i].iter() {
-                println!("- {:?}", ProofOfInclusion::bytes_to_hex(hash));
+                println!("- {:?}", hash);
             }
         }
     }
@@ -240,7 +245,7 @@ mod test {
     fn build_simple_tree() {
         let data = vec![[1; 32], [2; 32], [3; 32], [4; 32]];
 
-        let tree = MerkleTree::new_from_hashes(data);
+        let tree = MerkleTree::new_from_hasables(data);
 
         println!("LEVEL 1: {:?}", tree.levels[0]);
         println!("LEVEL 2: {:?}", tree.levels[1]);
@@ -331,11 +336,7 @@ mod test {
 
         let tree = MerkleTree::new_from_hasables(data);
 
-        let mut hasher = Sha3_256::new();
-        hasher.update("something017");
-        let result = hasher.finalize();
-
-        let hash: [u8; 32] = result.into();
+        let hash = MerkleTree::get_hash_of(&"something017");
 
         assert!(tree.verify_with_index(hash, 17));
 
@@ -460,9 +461,9 @@ mod test {
         tree.print();
 
         let new_data = MerkleTree::get_hash_of(&"something099");
-        tree.add_hash(new_data);
+        tree.add_hash(new_data.clone());
 
-        assert!(tree.verify(new_data));
+        assert!(tree.verify(new_data.clone()));
 
         let proof = tree.proof_of_inclusion(new_data).unwrap();
         println!("PROOF OF ADDED:");
