@@ -156,9 +156,9 @@ impl MerkleTree {
         &self,
         leaf: MerkleHash,
         mut index: u32,
-    ) -> Result<ProofOfInclusion, String> {
+    ) -> Result<ProofOfInclusion, &str> {
         if self.levels[0][index as usize] != leaf || !self.verify_with_index(leaf.clone(), index) {
-            return Err("Hash is not part of the tree".to_string());
+            return Err("Hash is not part of the tree");
         }
 
         let mut proof = vec![];
@@ -191,10 +191,10 @@ impl MerkleTree {
     ///
     /// # Returns
     /// A Result that, if the hash given is included in the tree, contains a `ProofOfInclusion` containing the proof of inclusion for the given hash. If the hash is not included in the tree, an error message is returned.
-    pub fn proof_of_inclusion(&self, leaf: MerkleHash) -> Result<ProofOfInclusion, String> {
+    pub fn proof_of_inclusion(&self, leaf: MerkleHash) -> Result<ProofOfInclusion, &str> {
         let hash_index = match self.levels[0].iter().position(|h| h == &leaf) {
             Some(index) => index,
-            None => return Err("Hash not found in tree".to_string()),
+            None => return Err("Hash not found in tree"),
         };
 
         self.proof_of_inclusion_with_index(leaf, hash_index as u32)
@@ -204,8 +204,13 @@ impl MerkleTree {
     ///
     /// # Parameters
     /// - `hash`: The hash to add to the tree
-    pub fn add_hash(&mut self, hash: MerkleHash) {
+    pub fn add_hash(&mut self, hash: MerkleHash) -> Result<(), &str> {
         let len = self.levels[0].len();
+
+        if self.verify(hash.clone()) {
+            return Err("Hash is already in the tree");
+        }
+
         if self.levels[0][len - 1] == self.levels[0][len - 2] {
             self.levels[0][len - 1] = hash;
         } else {
@@ -217,12 +222,13 @@ impl MerkleTree {
         MerkleTree::build_tree(&mut new_tree, self.levels[0].clone());
 
         self.levels = new_tree.levels;
+        Ok(())
     }
 
     /// Adds an element that will be hashed before adding it to the Merkle Tree, .
-    pub fn add_data(&mut self, data: impl AsRef<[u8]>) {
+    pub fn add_data(&mut self, data: impl AsRef<[u8]>) -> Result<(), &str> {
         let hash = MerkleTree::get_hash_of(&data);
-        self.add_hash(hash);
+        self.add_hash(hash)
     }
 
     /// Converts a byte slice to a hexadecimal string.
@@ -468,7 +474,7 @@ mod test {
         tree.print();
 
         let new_data = MerkleTree::get_hash_of(&"something099");
-        tree.add_hash(new_data.clone());
+        let _ = tree.add_hash(new_data.clone());
 
         assert!(tree.verify(new_data.clone()));
 
