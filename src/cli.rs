@@ -2,10 +2,12 @@ use crate::merkle_tree::MerkleTree;
 use std::error::Error;
 use std::{io, vec};
 
+/// The `CLI` struct is used to manage the command line interface of the Merkle Tree.
 pub struct CLI {
     tree: MerkleTree,
 }
 
+/// Implementation of the `Default` trait for the `CLI` struct.
 impl Default for CLI {
     fn default() -> Self {
         Self::new()
@@ -13,12 +15,14 @@ impl Default for CLI {
 }
 
 impl CLI {
+    /// Creates a new `CLI` struct.
     pub fn new() -> Self {
         CLI {
             tree: MerkleTree::new_from_hasables(vec![""]),
         }
     }
 
+    /// Processes the input commands from the user and manages the CLI.
     fn manage_input(&mut self, commands: Vec<&str>, running: &mut bool) {
         match commands[0] {
             "exit" => {
@@ -49,6 +53,7 @@ impl CLI {
         }
     }
 
+    /// Prints the list of commands available in the CLI.
     fn print_help() {
         println!("COMMANDS \n");
         println!("-- CREATE --");
@@ -71,6 +76,7 @@ impl CLI {
         println!("- Exits the program.")
     }
 
+    /// Processes the file with the elements to be added to the Merkle Tree.
     fn process_file(path: &str) -> Result<Vec<String>, Box<dyn Error>> {
         let elements = std::fs::read_to_string(path)?;
 
@@ -82,6 +88,8 @@ impl CLI {
             .collect())
     }
 
+    /// Handles the creation of a new Merkle Tree.
+    /// The tree can be created from a file with elements or from a file with hashes. The `-h` flag is used to hash the elements before adding them to the tree.
     fn handle_create_tree(&mut self, commands: Vec<&str>) {
         if commands.len() < 2 || commands.len() > 3 {
             println!("Invalid number of arguments. Usage: create <path/to/elements.txt>");
@@ -110,6 +118,7 @@ impl CLI {
         );
     }
 
+    /// Handles the verification of the inclusion of an element in the Merkle Tree.
     fn handle_verify_inclusion(&mut self, commands: Vec<&str>) {
         if commands.len() != 2 {
             println!("Invalid number of arguments. Usage: verify <element>");
@@ -125,6 +134,7 @@ impl CLI {
         }
     }
 
+    /// Handles the generation of the proof of inclusion of an element in the Merkle Tree.
     fn handle_proof_of_inclusion(&mut self, commands: Vec<&str>) {
         if commands.len() != 2 {
             println!("Invalid number of arguments. Usage: proof <element>");
@@ -143,6 +153,8 @@ impl CLI {
         }
     }
 
+    /// Handles the addition of an element to the Merkle Tree.
+    /// The element can be added as a hash or as a string. The `-h` flag is used to hash the element before adding it to the tree.
     fn handle_add_element(&mut self, commands: Vec<&str>) {
         if commands.len() < 2 || commands.len() > 3 {
             println!("Invalid number of arguments. Usage: add <element>");
@@ -172,6 +184,7 @@ impl CLI {
         println!("{:?} added to the tree.", element);
     }
 
+    /// Reads the input from the user and returns a vector with the commands.
     fn get_commands(input: &mut String) -> Vec<&str> {
         match io::stdin().read_line(input) {
             Ok(_) => (),
@@ -182,6 +195,7 @@ impl CLI {
         input.split(&" ").collect()
     }
 
+    /// Runs the CLI.
     pub fn run(&mut self) {
         println!("Welcome to the Merkle Tree CLI, type 'help' to see the list of commands.");
 
