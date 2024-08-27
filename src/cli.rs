@@ -115,6 +115,16 @@ impl CLI {
         println!("{:?} added to the tree.", element);
     }
 
+    fn get_commands(input: &mut String) -> Vec<&str> {
+        match io::stdin().read_line(input) {
+            Ok(_) => (),
+            Err(e) => println!("Failed to read line: {}", e),
+        };
+
+        *input = input.trim().to_string();
+        input.split(&" ").collect()
+    }
+
     pub fn run(&mut self) {
         // read file with hashes, get file path from user
         // console-based menu that lets user:
@@ -127,13 +137,7 @@ impl CLI {
         let mut running = true;
 
         while running {
-            match io::stdin().read_line(&mut input) {
-                Ok(_) => (),
-                Err(e) => println!("Failed to read line: {}", e),
-            };
-
-            input = input.trim().to_string();
-            let commands: Vec<&str> = input.split(&" ").collect();
+            let commands = CLI::get_commands(&mut input);
 
             self.manage_input(commands, &mut running);
 
