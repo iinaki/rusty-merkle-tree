@@ -54,7 +54,7 @@ impl CLI {
         println!("-- CREATE --");
         println!("create <path/to/elements.txt> <-h>");
         println!("- Creates a new Merkle Tree from a file with elements. If the -h flag is present, the elements are hashed before being added to the tree. \n");
-        println!("-- SHOW --"); 
+        println!("-- SHOW --");
         println!("show");
         println!("- Shows the current state of the Merkle Tree. \n");
         println!("-- VERIFY --");
