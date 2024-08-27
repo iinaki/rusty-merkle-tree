@@ -164,7 +164,7 @@ impl CLI {
         let element = commands[1];
 
         if commands.len() == 3 && commands[2] == "-h" {
-            match self.tree.add_data(element){
+            match self.tree.add_data(element) {
                 Ok(_) => (),
                 Err(_) => {
                     println!("{} is already in the tree!", element);
@@ -172,7 +172,7 @@ impl CLI {
                 }
             }
         } else {
-            match self.tree.add_hash(element.to_string()){
+            match self.tree.add_hash(element.to_string()) {
                 Ok(_) => (),
                 Err(_) => {
                     println!("{} is already in the tree!", element);
