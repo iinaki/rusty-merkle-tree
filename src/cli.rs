@@ -1,4 +1,5 @@
 use crate::merkle_tree::MerkleTree;
+use std::error::Error;
 use std::{io, vec};
 
 pub struct CLI {
@@ -69,25 +70,39 @@ impl CLI {
         println!("- Exits the program.")
     }
 
+    fn process_file(path: &str) -> Result<Vec<String>, Box<dyn Error>> {
+        let elements = std::fs::read_to_string(path)?;
+
+        let elements: Vec<&str> = elements.split("\n").collect();
+
+        Ok(elements
+            .iter()
+            .map(|element| element.trim().to_string())
+            .collect())
+    }
+
     fn handle_create_tree(&mut self, commands: Vec<&str>) {
-        if commands.len() != 2 {
+        if commands.len() < 2 || commands.len() > 3 {
             println!("Invalid number of arguments. Usage: create <path/to/elements.txt>");
             return;
         }
 
         let path = commands[1];
-        let elements = match std::fs::read_to_string(path) {
-            Ok(contents) => contents,
+
+        let elements = match CLI::process_file(path) {
+            Ok(elements) => elements,
             Err(e) => {
                 println!("Failed to read file: {}", e);
                 return;
             }
         };
 
-        let elements: Vec<&str> = elements.split("\n").collect();
-        let elements: Vec<&str> = elements.iter().map(|element| element.trim()).collect();
+        if commands.len() == 3 && commands[2] == "-h" {
+            self.tree = MerkleTree::new_from_hasables(elements);
+        } else {
+            self.tree = MerkleTree::new_from_hashes(elements);
+        }
 
-        self.tree = MerkleTree::new_from_hasables(elements);
         println!(
             "Merkle Tree created from file: {:?}, use 'show' to view te current tree.",
             path
@@ -128,13 +143,19 @@ impl CLI {
     }
 
     fn handle_add_element(&mut self, commands: Vec<&str>) {
-        if commands.len() != 2 {
+        if commands.len() < 2 || commands.len() > 3 {
             println!("Invalid number of arguments. Usage: add <element>");
             return;
         }
 
         let element = commands[1];
-        self.tree.add_hash(element.to_string());
+
+        if commands.len() == 3 && commands[2] == "-h" {
+            self.tree.add_data(element.to_string());
+        } else {
+            self.tree.add_hash(element.to_string());
+        }
+
         println!("{:?} added to the tree.", element);
     }
 
@@ -149,11 +170,6 @@ impl CLI {
     }
 
     pub fn run(&mut self) {
-        // read file with hashes, get file path from user
-        // console-based menu that lets user:
-        //     - see if tx hash included in tree
-        //     - see proof of inclusion for tx hash
-        //     - add tx hash to tree
         println!("Welcome to the Merkle Tree CLI, type 'help' to see the list of commands.");
 
         let mut input = "".to_string();

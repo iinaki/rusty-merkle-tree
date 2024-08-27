@@ -225,6 +225,7 @@ impl MerkleTree {
         self.add_hash(hash);
     }
 
+    /// Converts a byte slice to a hexadecimal string.
     pub fn bytes_to_hex(bytes: &[u8]) -> String {
         let hex_chars: Vec<String> = bytes.iter().map(|byte| format!("{:02x}", byte)).collect();
         hex_chars.join("")
