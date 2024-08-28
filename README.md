@@ -11,8 +11,8 @@
 By running the program you will enter the interactive CLI. To view the available commands type `help`, they are:
 - `create <path/to/elements.txt> <--hash>`, creates a new Merkle Tree from the elements in the file, it is assumed that the elements in the file are hashed, if the `--hash` flag is passed the elements will be hashed before being added to the tree.
 - `show`, displays the current Merkle Tree.
-- `verify <element>`, verifies if the given element is present in the Merkle Tree.
-- `proof <element>`, generates a proof of inclusion for the given element.
+- `verify <element> <index>`, verifies if the given element is present in the Merkle Tree. The parameter `index` is optional, and if passed the program will verify if the element is present in the given index, and reducing the time of the verification to O(log n).
+- `proof <element> <index>`, generates a proof of inclusion for the given element. The parameter `index` is optional, and if passed the program will obtain the Proof of Inclusion if the element is present in the given index, and reducing the time of the proof to O(log n).
 - `add <element> <--hash>`, adds a new element to the Merkle Tree, if the `--hash` flag is passed the element will be hashed before being added to the tree.
 - `exit`, exits the program.
 
