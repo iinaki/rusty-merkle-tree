@@ -1,10 +1,10 @@
 # Rusty Merkle Tree
 
 ### How to run
-- Clone the repository with git clone.
+- Clone the repository with `git clone`.
 - Enter the directory containing the Merkle Tree files and run `cargo run`.
 - To run you can also use the makefile, just run `make run`.
-- Additionaly you can run `make all` to run the game and also run the tests, run clippy and format the code.
+- Additionaly you can run `make all` to run the program and also run the tests, run clippy and format the code.
 - Use `make test` to run the tests, use `make fmt` to format the code and `make clippy` to run clippy.
 
 ### How to use
