@@ -1,6 +1,39 @@
+use clap::{Parser, Subcommand};
+
 use crate::merkle_tree::MerkleTree;
 use std::error::Error;
-use std::{io, vec};
+use std::vec;
+
+#[derive(Parser)]
+#[command(disable_help_flag = true)]
+#[command(disable_help_subcommand = true)]
+struct Args {
+    #[command(subcommand)]
+    cmd: Commands,
+}
+
+#[derive(Subcommand)]
+enum Commands {
+    Create {
+        path: String,
+        #[arg(long)]
+        hash: bool,
+    },
+    Show,
+    Help,
+    Verify {
+        elem: String,
+    },
+    Proof {
+        elem: String,
+    },
+    Add {
+        elem: String,
+        #[arg(long)]
+        hash: bool,
+    },
+    Exit,
+}
 
 /// The `CLI` struct is used to manage the command line interface of the Merkle Tree.
 pub struct CLI {
@@ -27,32 +60,22 @@ impl CLI {
     }
 
     /// Processes the input commands from the user and manages the CLI.
-    fn manage_input(&mut self, commands: Vec<&str>, running: &mut bool) {
-        match commands[0] {
-            "exit" => {
-                println!("Exiting...");
-                *running = false;
-            }
-            "help" => {
-                CLI::print_help();
-            }
-            "create" => {
-                self.handle_create_tree(commands);
-            }
-            "show" => {
-                self.tree.print();
-            }
-            "verify" => {
-                self.handle_verify_inclusion(commands);
-            }
-            "proof" => {
-                self.handle_proof_of_inclusion(commands);
-            }
-            "add" => {
-                self.handle_add_element(commands);
-            }
-            _ => {
-                println!("Invalid command. Type 'help' to see the list of commands.");
+    fn manage_input(&mut self, commands: Vec<String>, running: &mut bool) {
+        match Args::try_parse_from(commands.iter()).map_err(|e| e.to_string()) {
+            Ok(cli) => match cli.cmd {
+                Commands::Create { path, hash } => self.handle_create_tree(path, hash),
+                Commands::Show => self.tree.print(),
+                Commands::Help => CLI::print_help(),
+                Commands::Verify { elem } => self.handle_verify_inclusion(elem),
+                Commands::Proof { elem } => self.handle_proof_of_inclusion(elem),
+                Commands::Add { elem, hash } => self.handle_add_element(elem, hash),
+                Commands::Exit => {
+                    println!("Exiting...");
+                    *running = false;
+                }
+            },
+            Err(_) => {
+                println!("That's not a valid command - use the help command if you are stuck.")
             }
         }
     }
@@ -93,16 +116,9 @@ impl CLI {
     }
 
     /// Handles the creation of a new Merkle Tree.
-    /// The tree can be created from a file with elements or from a file with hashes. The `-h` flag is used to hash the elements before adding them to the tree.
-    fn handle_create_tree(&mut self, commands: Vec<&str>) {
-        if commands.len() < 2 || commands.len() > 3 {
-            println!("Invalid number of arguments. Usage: create <path/to/elements.txt>");
-            return;
-        }
-
-        let path = commands[1];
-
-        let elements = match CLI::process_file(path) {
+    /// The tree can be created from a file with elements or from a file with hashes. The `--hash` flag is used to hash the elements before adding them to the tree.
+    fn handle_create_tree(&mut self, path: String, hash: bool) {
+        let elements = match CLI::process_file(&path) {
             Ok(elements) => elements,
             Err(e) => {
                 println!("Failed to read file: {}", e);
@@ -110,7 +126,7 @@ impl CLI {
             }
         };
 
-        if commands.len() == 3 && commands[2] == "-h" {
+        if hash {
             self.tree = MerkleTree::new_from_hasables(elements);
         } else {
             self.tree = MerkleTree::new_from_hashes(elements);
@@ -123,80 +139,69 @@ impl CLI {
     }
 
     /// Handles the verification of the inclusion of an element in the Merkle Tree.
-    fn handle_verify_inclusion(&mut self, commands: Vec<&str>) {
-        if commands.len() != 2 {
-            println!("Invalid number of arguments. Usage: verify <element>");
-            return;
-        }
-
-        let element = commands[1];
-
-        if self.tree.verify(element.to_string()) {
-            println!("{:?} is included in the tree.", element);
+    fn handle_verify_inclusion(&mut self, elem: String) {
+        if self.tree.verify(elem.clone()) {
+            println!("{:?} is included in the tree. Run the `proof` command to see its Proof od Inclusion", elem);
         } else {
-            println!("{:?} is not included in the tree.", element);
+            println!("{:?} is not included in the tree.", elem);
         }
     }
 
     /// Handles the generation of the proof of inclusion of an element in the Merkle Tree.
-    fn handle_proof_of_inclusion(&mut self, commands: Vec<&str>) {
-        if commands.len() != 2 {
-            println!("Invalid number of arguments. Usage: proof <element>");
-            return;
-        }
-
-        let element = commands[1];
-
-        match self.tree.proof_of_inclusion(element.to_string()) {
+    fn handle_proof_of_inclusion(&mut self, elem: String) {
+        match self.tree.proof_of_inclusion(elem.clone()) {
             Ok(proof) => {
                 proof.print();
             }
             Err(_) => {
-                println!("{:?} is not included in the tree.", element);
+                println!("{:?} is not included in the tree.", elem);
             }
         }
     }
 
     /// Handles the addition of an element to the Merkle Tree.
-    /// The element can be added as a hash or as a string. The `-h` flag is used to hash the element before adding it to the tree.
-    fn handle_add_element(&mut self, commands: Vec<&str>) {
-        if commands.len() < 2 || commands.len() > 3 {
-            println!("Invalid number of arguments. Usage: add <element>");
-            return;
-        }
-
-        let element = commands[1];
-
-        if commands.len() == 3 && commands[2] == "-h" {
-            match self.tree.add_data(element) {
+    /// The element can be added as a hash or as a string. The `--hash` flag is used to hash the element before adding it to the tree.
+    fn handle_add_element(&mut self, elem: String, hash: bool) {
+        if hash {
+            match self.tree.add_data(elem.clone()) {
                 Ok(_) => (),
                 Err(_) => {
-                    println!("{} is already in the tree!", element);
+                    println!("{} is already in the tree!", elem);
                     return;
                 }
             }
         } else {
-            match self.tree.add_hash(element.to_string()) {
+            match self.tree.add_hash(elem.clone()) {
                 Ok(_) => (),
                 Err(_) => {
-                    println!("{} is already in the tree!", element);
+                    println!("{} is already in the tree!", elem);
                     return;
                 }
             }
         }
 
-        println!("{:?} added to the tree.", element);
+        println!("{:?} added to the tree.", elem);
     }
 
     /// Reads the input from the user and returns a vector with the commands.
-    fn get_commands(input: &mut String) -> Vec<&str> {
-        match io::stdin().read_line(input) {
+    fn get_commands(input: &mut String) -> Vec<String> {
+        match std::io::stdin().read_line(input) {
             Ok(_) => (),
             Err(e) => println!("Failed to read line: {}", e),
         };
 
-        *input = input.trim().to_string();
-        input.split(&" ").collect()
+        let line = input.trim();
+        let mut args = match shlex::split(line).ok_or("error: Invalid quoting") {
+            Ok(args) => args,
+            Err(e) => {
+                println!("{}", e);
+                return vec![];
+            }
+        };
+
+        args.insert(0, "app".to_string());
+
+        args
     }
 
     /// Runs the CLI.
@@ -207,9 +212,9 @@ impl CLI {
         let mut running = true;
 
         while running {
-            let commands = CLI::get_commands(&mut input);
+            let args = CLI::get_commands(&mut input);
 
-            self.manage_input(commands, &mut running);
+            self.manage_input(args, &mut running);
 
             input.clear();
         }
