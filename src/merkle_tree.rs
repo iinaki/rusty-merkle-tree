@@ -239,8 +239,16 @@ impl MerkleTree {
 
     /// Prints the Merkle Tree structure.
     pub fn print(&self) {
-        for i in 0..self.levels.len() {
-            println!("LEVEL {}:", i);
+        // for i in 0..self.levels.len() {
+        //     println!("LEVEL {}:", i);
+        //     for hash in self.levels[i].iter() {
+        //         println!("- {:?}", hash);
+        //     }
+        // }
+        // reversed
+
+        for i in (0..self.levels.len()).rev() {
+            println!("LEVEL {}:", self.levels.len() - i - 1);
             for hash in self.levels[i].iter() {
                 println!("- {:?}", hash);
             }
