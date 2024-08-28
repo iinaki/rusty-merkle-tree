@@ -27,7 +27,7 @@ impl MerkleTree {
     }
 
     /// Creates a new MerkleTree from a list of objects that can be converted to byte slices (== that are hashable).
-    pub fn new_from_hasables(data: Vec<impl AsRef<[u8]>>) -> MerkleTree {
+    pub fn new_from_hashables(data: Vec<impl AsRef<[u8]>>) -> MerkleTree {
         let hashes = data
             .iter()
             .map(|d| {
@@ -258,7 +258,7 @@ mod test {
     fn build_simple_tree() {
         let data = vec![[1; 32], [2; 32], [3; 32], [4; 32]];
 
-        let tree = MerkleTree::new_from_hasables(data);
+        let tree = MerkleTree::new_from_hashables(data);
 
         println!("LEVEL 1: {:?}", tree.levels[0]);
         println!("LEVEL 2: {:?}", tree.levels[1]);
@@ -281,7 +281,7 @@ mod test {
     fn build_simple_tree_from_strings() {
         let data = vec!["something00", "something01", "something02", "something03"];
 
-        let tree = MerkleTree::new_from_hasables(data);
+        let tree = MerkleTree::new_from_hashables(data);
 
         tree.print();
 
@@ -301,7 +301,7 @@ mod test {
             "something04",
         ];
 
-        let tree = MerkleTree::new_from_hasables(data);
+        let tree = MerkleTree::new_from_hashables(data);
 
         let hash = MerkleTree::get_hash_of(&"something04");
         println!("HASH: {:?}", hash);
@@ -347,7 +347,7 @@ mod test {
             "something031",
         ];
 
-        let tree = MerkleTree::new_from_hasables(data);
+        let tree = MerkleTree::new_from_hashables(data);
 
         let hash = MerkleTree::get_hash_of(&"something017");
 
@@ -393,7 +393,7 @@ mod test {
             "something031",
         ];
 
-        let tree = MerkleTree::new_from_hasables(data);
+        let tree = MerkleTree::new_from_hashables(data);
 
         let hash = MerkleTree::get_hash_of(&"something017");
 
@@ -440,7 +440,7 @@ mod test {
             "something031",
         ];
 
-        let tree = MerkleTree::new_from_hasables(data);
+        let tree = MerkleTree::new_from_hashables(data);
 
         let hash = MerkleTree::get_hash_of(&"not in the tree");
 
@@ -469,7 +469,7 @@ mod test {
             "something016",
         ];
 
-        let mut tree = MerkleTree::new_from_hasables(data);
+        let mut tree = MerkleTree::new_from_hashables(data);
         println!("TREE BEFORE ADDING:");
         tree.print();
 

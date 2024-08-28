@@ -51,7 +51,7 @@ impl CLI {
     /// Creates a new `CLI` struct.
     pub fn new() -> Self {
         CLI {
-            tree: MerkleTree::new_from_hasables(vec![""]),
+            tree: MerkleTree::new_from_hashables(vec![""]),
         }
     }
 
@@ -127,7 +127,7 @@ impl CLI {
         };
 
         if hash {
-            self.tree = MerkleTree::new_from_hasables(elements);
+            self.tree = MerkleTree::new_from_hashables(elements);
         } else {
             self.tree = MerkleTree::new_from_hashes(elements);
         }
