@@ -23,6 +23,7 @@ I've included two files in the examples directory, one with hashes and one with 
 You can run the examples with:
 - `cargo run --example hashes`
 - `cargo run --example strings`
+- You can also run it with the makefile: `make example-hashes` and `make example-strings`.
 
 The program doesn't check wheather the hashes are valid or not, it assumes that the hashes are valid SHA256.
 

@@ -12,8 +12,8 @@ fmt:
 run:
 	cargo run
 
-example strings:
+example-strings:
 	cargo run --example strings
 
-example hashes:
+example-hashes:
 	cargo run --example hashes
