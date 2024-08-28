@@ -16,7 +16,7 @@ By running the program you will enter the interactive CLI. To view the available
 - `add <element> <--hash>`, adds a new element to the Merkle Tree, if the `--hash` flag is passed the element will be hashed before being added to the tree.
 - `exit`, exits the program.
 
-To create a Merkle Tree you have to pass the program a file with the hashes/elements that you want te tree to store.
+To create a Merkle Tree you have to pass the program a file with the hashes/elements that you want the tree to store.
 
 ### Examples
 I've included two files in the examples directory, one with hashes and one with strings for you to test.
