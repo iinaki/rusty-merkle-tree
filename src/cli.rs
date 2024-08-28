@@ -109,12 +109,13 @@ impl CLI {
     pub fn process_file(path: &str) -> Result<Vec<String>, Box<dyn Error>> {
         let elements = std::fs::read_to_string(path)?;
 
-        let elements: Vec<&str> = elements.split("\n").collect();
+        let elements = elements
+        .lines()
+        .map(|line| line.trim().to_string())
+        .filter(|line| !line.is_empty())
+        .collect();
 
-        Ok(elements
-            .iter()
-            .map(|element| element.trim().to_string())
-            .collect())
+        Ok(elements)
     }
 
     /// Handles the creation of a new Merkle Tree.
