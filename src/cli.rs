@@ -110,10 +110,10 @@ impl CLI {
         let elements = std::fs::read_to_string(path)?;
 
         let elements = elements
-        .lines()
-        .map(|line| line.trim().to_string())
-        .filter(|line| !line.is_empty())
-        .collect();
+            .lines()
+            .map(|line| line.trim().to_string())
+            .filter(|line| !line.is_empty())
+            .collect();
 
         Ok(elements)
     }
