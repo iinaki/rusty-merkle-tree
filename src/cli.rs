@@ -22,6 +22,10 @@ impl CLI {
         }
     }
 
+    pub fn new_from_tree(tree: MerkleTree) -> Self {
+        CLI { tree }
+    }
+
     /// Processes the input commands from the user and manages the CLI.
     fn manage_input(&mut self, commands: Vec<&str>, running: &mut bool) {
         match commands[0] {
@@ -77,7 +81,7 @@ impl CLI {
     }
 
     /// Processes the file with the elements to be added to the Merkle Tree.
-    fn process_file(path: &str) -> Result<Vec<String>, Box<dyn Error>> {
+    pub fn process_file(path: &str) -> Result<Vec<String>, Box<dyn Error>> {
         let elements = std::fs::read_to_string(path)?;
 
         let elements: Vec<&str> = elements.split("\n").collect();
