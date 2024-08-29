@@ -199,7 +199,7 @@ impl MerkleTree {
         if self.verify(hash.clone()) {
             return Err("Hash is already in the tree");
         }
-        
+
         if len >= 2 && self.levels[0][len - 1] == self.levels[0][len - 2] {
             self.levels[0][len - 1] = hash;
         } else {
