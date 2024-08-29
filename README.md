@@ -2,8 +2,7 @@
 
 ### How to run
 - Clone the repository with `git clone`.
-- Enter the directory containing the Merkle Tree files and run `cargo run`.
-- To run you can also use the makefile, just run `make run`.
+- To run the program, enter the directory containing the Merkle Tree files and run `make run`, you can also run `cargo run`.
 - Additionaly you can run `make all` to run the program and also run the tests, run clippy and format the code.
 - Use `make test` to run the tests, use `make fmt` to format the code and `make clippy` to run clippy.
 
@@ -16,16 +15,11 @@ By running the program you will enter the interactive CLI. To view the available
 - `add <element> <--hash>`, adds a new element to the Merkle Tree, if the `--hash` flag is passed the element will be hashed before being added to the tree.
 - `exit`, exits the program.
 
-To create a Merkle Tree you have to pass the program a file with the hashes/elements that you want the tree to store.
+To create a Merkle Tree you have to pass the program a file with the hashes/elements that you want the tree to store. The program doesn't check wheather the hashes are valid or not, it assumes that the hashes are valid SHA256.
 
 ### Examples
 I've included two files in the examples directory, one with hashes and one with strings for you to test.
-You can run the examples with:
-- `cargo run --example hashes`
-- `cargo run --example strings`
-- You can also run it with the makefile: `make example-hashes` and `make example-strings`.
-
-The program doesn't check wheather the hashes are valid or not, it assumes that the hashes are valid SHA256.
+- You can run them with: `make example-hashes` and `make example-strings`.
 
 ### Merkle Proof of Inclusion
 Merkle proofs are used to decide upon the following factors:
