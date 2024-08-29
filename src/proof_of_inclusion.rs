@@ -19,4 +19,9 @@ impl ProofOfInclusion {
             println!("{:?} - {:?}", hash, direction);
         }
     }
+
+    /// Returns an interator over the proof of inclusion.
+    pub fn iter(&self) -> impl Iterator<Item = &(MerkleHash, Direction)> {
+        self.proof.iter()
+    }
 }

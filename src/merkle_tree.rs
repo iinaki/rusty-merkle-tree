@@ -91,30 +91,23 @@ impl MerkleTree {
     /// # Parameters
     /// - `leaf`: The hash to verify
     /// - `index`: The index of the hash in the bottom level of the tree
-    pub fn verify_with_index(&self, leaf: MerkleHash, mut index: u32) -> bool {
+    pub fn verify_with_index(&self, leaf: MerkleHash, index: u32) -> bool {
         if self.levels[0][index as usize] != leaf {
             return false;
         }
 
+        let proof = match self.proof_of_inclusion_with_index(leaf.clone(), index) {
+            Ok(proof) => proof,
+            Err(_) => return false,
+        };
+
         let mut computed_root = leaf;
 
-        for level in self.levels.iter() {
-            if level.len() == 1 {
-                break;
-            }
-
-            if index % 2 == 0 {
-                computed_root = if index + 1 < level.len() as u32 {
-                    MerkleTree::combine_hashes(computed_root, level[(index + 1) as usize].clone())
-                } else {
-                    MerkleTree::combine_hashes(computed_root.clone(), computed_root.clone())
-                }
-            } else {
-                computed_root =
-                    MerkleTree::combine_hashes(level[(index - 1) as usize].clone(), computed_root);
-            }
-
-            index /= 2;
+        for (hash, direction) in proof.iter() {
+            computed_root = match direction {
+                Direction::Left => MerkleTree::combine_hashes(hash.clone(), computed_root),
+                Direction::Right => MerkleTree::combine_hashes(computed_root, hash.clone()),
+            };
         }
 
         computed_root == self.root()
@@ -157,7 +150,7 @@ impl MerkleTree {
         leaf: MerkleHash,
         mut index: u32,
     ) -> Result<ProofOfInclusion, &str> {
-        if self.levels[0][index as usize] != leaf || !self.verify_with_index(leaf.clone(), index) {
+        if self.levels[0][index as usize] != leaf {
             return Err("Hash is not part of the tree");
         }
 
@@ -239,14 +232,6 @@ impl MerkleTree {
 
     /// Prints the Merkle Tree structure.
     pub fn print(&self) {
-        // for i in 0..self.levels.len() {
-        //     println!("LEVEL {}:", i);
-        //     for hash in self.levels[i].iter() {
-        //         println!("- {:?}", hash);
-        //     }
-        // }
-        // reversed
-
         for i in (0..self.levels.len()).rev() {
             println!("LEVEL {}:", self.levels.len() - i - 1);
             for hash in self.levels[i].iter() {
