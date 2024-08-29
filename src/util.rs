@@ -1,5 +1,6 @@
 use crate::{cli::CLI, merkle_tree::MerkleTree};
 
+/// Runs an example from a file.
 pub fn run_example_from_path(path: &str) {
     let elements = match CLI::process_file(path) {
         Ok(elements) => elements,

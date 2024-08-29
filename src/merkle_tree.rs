@@ -82,7 +82,7 @@ impl MerkleTree {
     }
 
     /// Returns the root of the Merkle Tree, which is the Merkle Root.
-    pub fn root(&self) -> MerkleHash {
+    fn root(&self) -> MerkleHash {
         self.levels[self.levels.len() - 1][0].clone()
     }
 
@@ -225,7 +225,7 @@ impl MerkleTree {
     }
 
     /// Converts a byte slice to a hexadecimal string.
-    pub fn bytes_to_hex(bytes: &[u8]) -> String {
+    fn bytes_to_hex(bytes: &[u8]) -> String {
         let hex_chars: Vec<String> = bytes.iter().map(|byte| format!("{:02x}", byte)).collect();
         hex_chars.join("")
     }
