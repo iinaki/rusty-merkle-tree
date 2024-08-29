@@ -58,11 +58,7 @@ impl MerkleTree {
         let mut next_hashes = vec![];
         for i in (0..hashes.len()).step_by(2) {
             let left = hashes[i].clone();
-            let right = if i + 1 < hashes.len() {
-                hashes[i + 1].clone()
-            } else {
-                left.clone()
-            };
+            let right = hashes[i + 1].clone();
 
             next_hashes.push(MerkleTree::combine_hashes(left, right));
         }
@@ -203,8 +199,8 @@ impl MerkleTree {
         if self.verify(hash.clone()) {
             return Err("Hash is already in the tree");
         }
-
-        if self.levels[0][len - 1] == self.levels[0][len - 2] {
+        
+        if len >= 2 && self.levels[0][len - 1] == self.levels[0][len - 2] {
             self.levels[0][len - 1] = hash;
         } else {
             self.levels[0].push(hash);
