@@ -1,7 +1,7 @@
 use clap::{Parser, Subcommand};
 
 use crate::merkle_tree::MerkleTree;
-use std::error::Error;
+use crate::merkle_tree_error::MerkleTreeError;
 use std::vec;
 
 #[derive(Parser, Debug)]
@@ -65,19 +65,11 @@ pub struct CLI {
     tree: MerkleTree,
 }
 
-/// Implementation of the `Default` trait for the `CLI` struct.
-impl Default for CLI {
-    fn default() -> Self {
-        Self::new()
-    }
-}
-
 impl CLI {
     /// Creates a new `CLI` struct.
-    pub fn new() -> Self {
-        CLI {
-            tree: MerkleTree::new_from_hashables(vec![""]),
-        }
+    pub fn new() -> Result<Self, MerkleTreeError> {
+        let tree = MerkleTree::new_from_hashables(vec![""])?;
+        Ok(CLI { tree })
     }
 
     pub fn new_from_tree(tree: MerkleTree) -> Self {
@@ -105,8 +97,15 @@ impl CLI {
     }
 
     /// Processes the file with the elements to be added to the Merkle Tree.
-    pub fn process_file(path: &str) -> Result<Vec<String>, Box<dyn Error>> {
-        let elements = std::fs::read_to_string(path)?;
+    pub fn process_file(path: &str) -> Result<Vec<String>, MerkleTreeError> {
+        let elements = match std::fs::read_to_string(path) {
+            Ok(elements) => elements,
+            Err(_) => {
+                return Err(MerkleTreeError::FailedToProcessFile(
+                    "Failed to read file".to_string(),
+                ));
+            }
+        };
 
         let elements = elements
             .lines()
@@ -129,15 +128,27 @@ impl CLI {
         let elements = match CLI::process_file(&path) {
             Ok(elements) => elements,
             Err(e) => {
-                println!("Failed to read file: {}", e);
+                println!("Failed to read file: {}. Error: {:?}", path, e);
                 return;
             }
         };
 
         if hash {
-            self.tree = MerkleTree::new_from_hashables(elements);
+            self.tree = match MerkleTree::new_from_hashables(elements) {
+                Ok(tree) => tree,
+                Err(e) => {
+                    println!("Failed to build the Merkle Tree: {:?}", e);
+                    return;
+                }
+            };
         } else {
-            self.tree = MerkleTree::new_from_hashes(elements);
+            self.tree = match MerkleTree::new_from_hashes(elements) {
+                Ok(tree) => tree,
+                Err(e) => {
+                    println!("Failed to build the Merkle Tree: {:?}", e);
+                    return;
+                }
+            };
         }
 
         println!(
@@ -168,8 +179,11 @@ impl CLI {
                 Ok(proof) => {
                     proof.print();
                 }
-                Err(_) => {
-                    println!("{:?} is not included in the tree at index {}.", elem, index);
+                Err(e) => {
+                    println!(
+                        "{:?} is not included in the tree at index {}. Error: {:?}",
+                        elem, index, e
+                    );
                 }
             }
         } else {
@@ -177,8 +191,8 @@ impl CLI {
                 Ok(proof) => {
                     proof.print();
                 }
-                Err(_) => {
-                    println!("{:?} is not included in the tree.", elem);
+                Err(e) => {
+                    println!("{:?} is not included in the tree. Error: {:?}", elem, e);
                 }
             }
         }
@@ -190,16 +204,16 @@ impl CLI {
         if hash {
             match self.tree.add_data(&elem) {
                 Ok(_) => (),
-                Err(_) => {
-                    println!("{} is already in the tree!", elem);
+                Err(e) => {
+                    println!("{} is already in the tree! Error: {:?}", elem, e);
                     return;
                 }
             }
         } else {
             match self.tree.add_hash(elem.clone()) {
                 Ok(_) => (),
-                Err(_) => {
-                    println!("{} is already in the tree!", elem);
+                Err(e) => {
+                    println!("{} is already in the tree! Error: {:?}", elem, e);
                     return;
                 }
             }

@@ -5,12 +5,18 @@ pub fn run_example_from_path(path: &str) {
     let elements = match CLI::process_file(path) {
         Ok(elements) => elements,
         Err(e) => {
-            println!("Failed to read file: {}", e);
+            println!("Failed to read file: {:?}", e);
             return;
         }
     };
 
-    let tree = MerkleTree::new_from_hashes(elements);
+    let tree = match MerkleTree::new_from_hashes(elements) {
+        Ok(tree) => tree,
+        Err(e) => {
+            println!("Failed to build the Merkle Tree: {:?}", e);
+            return;
+        }
+    };
 
     let mut cli = CLI::new_from_tree(tree);
     println!(
