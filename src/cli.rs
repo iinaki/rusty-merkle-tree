@@ -1,39 +1,62 @@
 use clap::{Parser, Subcommand};
 
 use crate::merkle_tree::MerkleTree;
-use std::error::Error;
+use crate::merkle_tree_error::MerkleTreeError;
 use std::vec;
 
-#[derive(Parser)]
-#[command(disable_help_flag = true)]
-#[command(disable_help_subcommand = true)]
+#[derive(Parser, Debug)]
+#[command(name = "tree")]
 struct Args {
     #[command(subcommand)]
     cmd: Commands,
 }
 
-#[derive(Subcommand)]
+#[derive(Subcommand, Debug)]
 enum Commands {
+    /// Creates a new Merkle Tree from a file with elements.
+    /// If the `--hash` flag is present, the elements are hashed before being added to the tree.
     Create {
+        /// Path to the file containing the elements
         path: String,
+
+        /// Hash the elements before adding to the tree
         #[arg(long)]
         hash: bool,
     },
+
+    /// Shows the current state of the Merkle Tree.
     Show,
-    Help,
+
+    /// Verifies if an element is included in the Merkle Tree.
     Verify {
+        /// The element to verify
         elem: String,
+
+        /// Optionally provide the index for verification
         index: Option<u32>,
     },
+
+    /// Shows the proof of inclusion for an element.
     Proof {
+        /// The element to get proof of inclusion for
         elem: String,
+
+        /// Optionally provide the index for proof of inclusion
         index: Option<u32>,
     },
+
+    /// Adds an element to the Merkle Tree.
+    /// If the `--hash` flag is present, the element is hashed before being added to the tree.
     Add {
+        /// The element to add
         elem: String,
+
+        /// Hash the element before adding to the tree
         #[arg(long)]
         hash: bool,
     },
+
+    /// Exit the CLI
     Exit,
 }
 
@@ -42,19 +65,11 @@ pub struct CLI {
     tree: MerkleTree,
 }
 
-/// Implementation of the `Default` trait for the `CLI` struct.
-impl Default for CLI {
-    fn default() -> Self {
-        Self::new()
-    }
-}
-
 impl CLI {
     /// Creates a new `CLI` struct.
-    pub fn new() -> Self {
-        CLI {
-            tree: MerkleTree::new_from_hashables(vec![""]),
-        }
+    pub fn new() -> Result<Self, MerkleTreeError> {
+        let tree = MerkleTree::new_from_hashables(vec![""])?;
+        Ok(CLI { tree })
     }
 
     pub fn new_from_tree(tree: MerkleTree) -> Self {
@@ -63,56 +78,45 @@ impl CLI {
 
     /// Processes the input commands from the user and manages the CLI.
     fn manage_input(&mut self, commands: Vec<String>, running: &mut bool) {
-        match Args::try_parse_from(commands.iter()).map_err(|e| e.to_string()) {
+        match Args::try_parse_from(commands.iter()) {
             Ok(cli) => match cli.cmd {
                 Commands::Create { path, hash } => self.handle_create_tree(path, hash),
                 Commands::Show => self.tree.print(),
-                Commands::Help => CLI::print_help(),
-                Commands::Verify { elem, index } => self.handle_verify_inclusion(elem, index),
-                Commands::Proof { elem, index } => self.handle_proof_of_inclusion(elem, index),
+                Commands::Verify { elem, index } => self.handle_verify_inclusion(&elem, index),
+                Commands::Proof { elem, index } => self.handle_proof_of_inclusion(&elem, index),
                 Commands::Add { elem, hash } => self.handle_add_element(elem, hash),
                 Commands::Exit => {
                     println!("Exiting...");
                     *running = false;
                 }
             },
-            Err(_) => {
-                println!("That's not a valid command - use the help command if you are stuck.")
+            Err(e) => {
+                println!("{}", e);
             }
         }
     }
 
-    /// Prints the list of commands available in the CLI.
-    fn print_help() {
-        println!("COMMANDS \n");
-        println!("-- CREATE --");
-        println!("create <path/to/elements.txt> <-h>");
-        println!("- Creates a new Merkle Tree from a file with elements. If the -h flag is present, the elements are hashed before being added to the tree. \n");
-        println!("-- SHOW --");
-        println!("show");
-        println!("- Shows the current state of the Merkle Tree. \n");
-        println!("-- VERIFY --");
-        println!("verify <element>");
-        println!("- Verifies if an element is included in the tree. \n");
-        println!("-- PROOF --");
-        println!("proof <element>");
-        println!("- Shows the proof of inclusion for an element. \n");
-        println!("-- ADD --");
-        println!("add <element> <-h>");
-        println!("- Adds an element to the tree. If the -h flag is present, the element is hashed before being added to the tree. \n");
-        println!("-- EXIT --");
-        println!("exit");
-        println!("- Exits the program.")
-    }
-
     /// Processes the file with the elements to be added to the Merkle Tree.
-    pub fn process_file(path: &str) -> Result<Vec<String>, Box<dyn Error>> {
-        let elements = std::fs::read_to_string(path)?;
+    pub fn process_file(path: &str) -> Result<Vec<String>, MerkleTreeError> {
+        let elements = match std::fs::read_to_string(path) {
+            Ok(elements) => elements,
+            Err(_) => {
+                return Err(MerkleTreeError::FailedToProcessFile(
+                    "Failed to read file".to_string(),
+                ));
+            }
+        };
 
         let elements = elements
             .lines()
-            .map(|line| line.trim().to_string())
-            .filter(|line| !line.is_empty())
+            .filter_map(|line| {
+                let trimmed = line.trim();
+                if trimmed.is_empty() {
+                    None
+                } else {
+                    Some(trimmed.to_string())
+                }
+            })
             .collect();
 
         Ok(elements)
@@ -124,32 +128,44 @@ impl CLI {
         let elements = match CLI::process_file(&path) {
             Ok(elements) => elements,
             Err(e) => {
-                println!("Failed to read file: {}", e);
+                println!("Failed to read file: {}. Error: {:?}", path, e);
                 return;
             }
         };
 
         if hash {
-            self.tree = MerkleTree::new_from_hashables(elements);
+            self.tree = match MerkleTree::new_from_hashables(elements) {
+                Ok(tree) => tree,
+                Err(e) => {
+                    println!("Failed to build the Merkle Tree: {:?}", e);
+                    return;
+                }
+            };
         } else {
-            self.tree = MerkleTree::new_from_hashes(elements);
+            self.tree = match MerkleTree::new_from_hashes(elements) {
+                Ok(tree) => tree,
+                Err(e) => {
+                    println!("Failed to build the Merkle Tree: {:?}", e);
+                    return;
+                }
+            };
         }
 
         println!(
-            "Merkle Tree created from file: {:?}, use 'show' to view te current tree.",
+            "Merkle Tree created from file: {:?}, use 'tree show' to view te current tree.",
             path
         );
     }
 
     /// Handles the verification of the inclusion of an element in the Merkle Tree.
-    fn handle_verify_inclusion(&mut self, elem: String, index: Option<u32>) {
+    fn handle_verify_inclusion(&mut self, elem: &String, index: Option<u32>) {
         if let Some(index) = index {
-            if self.tree.verify_with_index(elem.clone(), index) {
+            if self.tree.verify_with_index(elem, index) {
                 println!("{:?} is included in the tree at index {}. Run the `proof` command to see its Proof of Inclusion", elem, index);
             } else {
                 println!("{:?} is not included in the tree at index {}.", elem, index);
             }
-        } else if self.tree.verify(elem.clone()) {
+        } else if self.tree.verify(elem) {
             println!("{:?} is included in the tree. Run the `proof` command to see its Proof of Inclusion.", elem);
         } else {
             println!("{:?} is not included in the tree.", elem);
@@ -157,23 +173,26 @@ impl CLI {
     }
 
     /// Handles the generation of the proof of inclusion of an element in the Merkle Tree.
-    fn handle_proof_of_inclusion(&mut self, elem: String, index: Option<u32>) {
+    fn handle_proof_of_inclusion(&mut self, elem: &String, index: Option<u32>) {
         if let Some(index) = index {
-            match self.tree.proof_of_inclusion_with_index(elem.clone(), index) {
+            match self.tree.proof_of_inclusion_with_index(elem, index) {
                 Ok(proof) => {
                     proof.print();
                 }
-                Err(_) => {
-                    println!("{:?} is not included in the tree at index {}.", elem, index);
+                Err(e) => {
+                    println!(
+                        "{:?} is not included in the tree at index {}. Error: {:?}",
+                        elem, index, e
+                    );
                 }
             }
         } else {
-            match self.tree.proof_of_inclusion(elem.clone()) {
+            match self.tree.proof_of_inclusion(elem) {
                 Ok(proof) => {
                     proof.print();
                 }
-                Err(_) => {
-                    println!("{:?} is not included in the tree.", elem);
+                Err(e) => {
+                    println!("{:?} is not included in the tree. Error: {:?}", elem, e);
                 }
             }
         }
@@ -183,18 +202,18 @@ impl CLI {
     /// The element can be added as a hash or as a string. The `--hash` flag is used to hash the element before adding it to the tree.
     fn handle_add_element(&mut self, elem: String, hash: bool) {
         if hash {
-            match self.tree.add_data(elem.clone()) {
+            match self.tree.add_data(&elem) {
                 Ok(_) => (),
-                Err(_) => {
-                    println!("{} is already in the tree!", elem);
+                Err(e) => {
+                    println!("{} is already in the tree! Error: {:?}", elem, e);
                     return;
                 }
             }
         } else {
             match self.tree.add_hash(elem.clone()) {
                 Ok(_) => (),
-                Err(_) => {
-                    println!("{} is already in the tree!", elem);
+                Err(e) => {
+                    println!("{} is already in the tree! Error: {:?}", elem, e);
                     return;
                 }
             }
@@ -211,22 +230,18 @@ impl CLI {
         };
 
         let line = input.trim();
-        let mut args = match shlex::split(line).ok_or("error: Invalid quoting") {
+        match shlex::split(line).ok_or("error: Invalid quoting") {
             Ok(args) => args,
             Err(e) => {
                 println!("{}", e);
-                return vec![];
+                vec![]
             }
-        };
-
-        args.insert(0, "app".to_string());
-
-        args
+        }
     }
 
     /// Runs the CLI.
     pub fn run(&mut self) {
-        println!("Welcome to the Merkle Tree CLI, type 'help' to see the list of commands.");
+        println!("Welcome to the Merkle Tree CLI, type 'tree help' to see the list of commands.");
 
         let mut input = "".to_string();
         let mut running = true;

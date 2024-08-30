@@ -1,6 +1,7 @@
 use sha3::{Digest, Sha3_256};
 
 use crate::direction::Direction;
+use crate::merkle_tree_error::MerkleTreeError;
 use crate::proof_of_inclusion::ProofOfInclusion;
 
 use super::merkle_hash::MerkleHash;
@@ -20,20 +21,20 @@ pub struct MerkleTree {
 
 impl MerkleTree {
     /// Creates a new MerkleTree from a list of hashes.
-    pub fn new_from_hashes(hashes: Vec<MerkleHash>) -> MerkleTree {
+    pub fn new_from_hashes(hashes: Vec<MerkleHash>) -> Result<MerkleTree, MerkleTreeError> {
         let mut tree = MerkleTree { levels: vec![] };
-        MerkleTree::build_tree(&mut tree, hashes);
-        tree
+        MerkleTree::build_tree(&mut tree, hashes)?;
+        Ok(tree)
     }
 
     /// Creates a new MerkleTree from a list of objects that can be converted to byte slices (== that are hashable).
-    pub fn new_from_hashables(data: Vec<impl AsRef<[u8]>>) -> MerkleTree {
+    pub fn new_from_hashables(data: Vec<impl AsRef<[u8]>>) -> Result<MerkleTree, MerkleTreeError> {
+        let mut hasher = Sha3_256::new();
         let hashes = data
             .iter()
             .map(|d| {
-                let mut hasher = Sha3_256::new();
                 hasher.update(d);
-                let result = hasher.finalize();
+                let result = hasher.finalize_reset();
                 MerkleTree::bytes_to_hex(&result)
             })
             .collect();
@@ -42,44 +43,65 @@ impl MerkleTree {
     }
 
     /// Recursive function that builds the Merkle Tree from a list of hashes.
-    fn build_tree(tree: &mut MerkleTree, mut hashes: Vec<MerkleHash>) {
+    fn build_tree(
+        tree: &mut MerkleTree,
+        mut hashes: Vec<MerkleHash>,
+    ) -> Result<(), MerkleTreeError> {
         if hashes.len() == 1 {
-            tree.levels.push(hashes.clone());
-            return;
+            tree.levels.push(hashes);
+            return Ok(());
         }
 
         if hashes.len() % 2 != 0 {
-            let last = &hashes[hashes.len() - 1];
-            hashes.push(last.clone());
+            let last = match hashes.last() {
+                Some(last) => last.clone(),
+                None => {
+                    return Err(MerkleTreeError::FailedToBuild(
+                        "No last element in hashes".to_string(),
+                    ));
+                }
+            };
+            hashes.push(last);
         }
 
+        let len = hashes.len();
         tree.levels.push(hashes.clone());
 
         let mut next_hashes = vec![];
-        for i in (0..hashes.len()).step_by(2) {
-            let left = hashes[i].clone();
-            let right = hashes[i + 1].clone();
+        for i in (0..len).step_by(2) {
+            let left = &hashes[i];
+            let right = &hashes[i + 1];
 
             next_hashes.push(MerkleTree::combine_hashes(left, right));
         }
 
-        MerkleTree::build_tree(tree, next_hashes);
+        MerkleTree::build_tree(tree, next_hashes)
     }
 
     /// Concatenates two hashes and returns the hash of the concatenation.
-    fn combine_hashes(mut left: MerkleHash, right: MerkleHash) -> MerkleHash {
-        left = left + &right;
+    // fn combine_hashes(mut left: MerkleHash, right: &MerkleHash) -> MerkleHash {
+    //     left = left + right;
+
+    //     let mut hasher = Sha3_256::new();
+    //     hasher.update(left);
+    //     let result = hasher.finalize();
+
+    //     MerkleTree::bytes_to_hex(&result)
+    // }
+    fn combine_hashes(left: &MerkleHash, right: &MerkleHash) -> MerkleHash {
+        let mut combined = left.clone();
+        combined.push_str(right);
 
         let mut hasher = Sha3_256::new();
-        hasher.update(left);
+        hasher.update(combined);
         let result = hasher.finalize();
 
         MerkleTree::bytes_to_hex(&result)
     }
 
     /// Returns the root of the Merkle Tree, which is the Merkle Root.
-    fn root(&self) -> MerkleHash {
-        self.levels[self.levels.len() - 1][0].clone()
+    fn root(&self) -> &MerkleHash {
+        &self.levels[self.levels.len() - 1][0]
     }
 
     /// Verifies that a given hash is contained in the Merkle Tree, in O(log n) time, with n = number of leaf hashes.
@@ -87,34 +109,34 @@ impl MerkleTree {
     /// # Parameters
     /// - `leaf`: The hash to verify
     /// - `index`: The index of the hash in the bottom level of the tree
-    pub fn verify_with_index(&self, leaf: MerkleHash, index: u32) -> bool {
-        if self.levels[0][index as usize] != leaf {
+    pub fn verify_with_index(&self, leaf: &MerkleHash, index: u32) -> bool {
+        if self.levels[0][index as usize] != *leaf {
             return false;
         }
 
-        let proof = match self.proof_of_inclusion_with_index(leaf.clone(), index) {
+        let proof = match self.proof_of_inclusion_with_index(leaf, index) {
             Ok(proof) => proof,
             Err(_) => return false,
         };
 
-        let mut computed_root = leaf;
+        let mut computed_root = leaf.clone();
 
         for (hash, direction) in proof.iter() {
             computed_root = match direction {
-                Direction::Left => MerkleTree::combine_hashes(hash.clone(), computed_root),
-                Direction::Right => MerkleTree::combine_hashes(computed_root, hash.clone()),
+                Direction::Left => MerkleTree::combine_hashes(hash, &computed_root),
+                Direction::Right => MerkleTree::combine_hashes(&computed_root, hash),
             };
         }
 
-        computed_root == self.root()
+        &computed_root == self.root()
     }
 
     /// Verifies that a given hash is contained in the Merkle Tree, in O(n) time, with n = number of leaf hashes.
     ///
     /// # Parameters
     /// - `leaf`: The hash to verify
-    pub fn verify(&self, leaf: MerkleHash) -> bool {
-        let hash_index = match self.levels[0].iter().position(|h| h == &leaf) {
+    pub fn verify(&self, leaf: &MerkleHash) -> bool {
+        let hash_index = match self.levels[0].iter().position(|h| h == leaf) {
             Some(index) => index,
             None => return false,
         };
@@ -143,11 +165,13 @@ impl MerkleTree {
     /// A Result that, if the hash given is included in the tree, contains a `ProofOfInclusion` containing the proof of inclusion for the given hash. If the hash is not included in the tree, an error message is returned.
     pub fn proof_of_inclusion_with_index(
         &self,
-        leaf: MerkleHash,
+        leaf: &MerkleHash,
         mut index: u32,
-    ) -> Result<ProofOfInclusion, &str> {
-        if self.levels[0][index as usize] != leaf {
-            return Err("Hash is not part of the tree");
+    ) -> Result<ProofOfInclusion, MerkleTreeError> {
+        if self.levels[0][index as usize] != *leaf {
+            return Err(MerkleTreeError::InvalidHash(
+                "Hash is not part of the tree".to_string(),
+            ));
         }
 
         let mut proof = vec![];
@@ -170,7 +194,7 @@ impl MerkleTree {
             index /= 2;
         }
 
-        Ok(ProofOfInclusion::new_from(leaf, proof))
+        Ok(ProofOfInclusion::new_from(leaf.clone(), proof))
     }
 
     /// Returns a proof of inclusion for a given hash in the Merkle Tree. The proof generated conains the hashes of the siblings of the nodes in the path from the leaf to the root, and their directions. In O(n) time, with n = number of leaf hashes.
@@ -180,10 +204,17 @@ impl MerkleTree {
     ///
     /// # Returns
     /// A Result that, if the hash given is included in the tree, contains a `ProofOfInclusion` containing the proof of inclusion for the given hash. If the hash is not included in the tree, an error message is returned.
-    pub fn proof_of_inclusion(&self, leaf: MerkleHash) -> Result<ProofOfInclusion, &str> {
-        let hash_index = match self.levels[0].iter().position(|h| h == &leaf) {
+    pub fn proof_of_inclusion(
+        &self,
+        leaf: &MerkleHash,
+    ) -> Result<ProofOfInclusion, MerkleTreeError> {
+        let hash_index = match self.levels[0].iter().position(|h| h == leaf) {
             Some(index) => index,
-            None => return Err("Hash not found in tree"),
+            None => {
+                return Err(MerkleTreeError::InvalidHash(
+                    "Hash is not part of the tree".to_string(),
+                ))
+            }
         };
 
         self.proof_of_inclusion_with_index(leaf, hash_index as u32)
@@ -193,11 +224,13 @@ impl MerkleTree {
     ///
     /// # Parameters
     /// - `hash`: The hash to add to the tree
-    pub fn add_hash(&mut self, hash: MerkleHash) -> Result<(), &str> {
+    pub fn add_hash(&mut self, hash: MerkleHash) -> Result<(), MerkleTreeError> {
         let len = self.levels[0].len();
 
-        if self.verify(hash.clone()) {
-            return Err("Hash is already in the tree");
+        if self.verify(&hash) {
+            return Err(MerkleTreeError::HashAlreadyExists(
+                "Hash is already contained in the tree".to_string(),
+            ));
         }
 
         if len >= 2 && self.levels[0][len - 1] == self.levels[0][len - 2] {
@@ -208,14 +241,14 @@ impl MerkleTree {
 
         let mut new_tree = MerkleTree { levels: vec![] };
 
-        MerkleTree::build_tree(&mut new_tree, self.levels[0].clone());
+        MerkleTree::build_tree(&mut new_tree, self.levels[0].clone())?;
 
         self.levels = new_tree.levels;
         Ok(())
     }
 
     /// Adds an element that will be hashed before adding it to the Merkle Tree, .
-    pub fn add_data(&mut self, data: impl AsRef<[u8]>) -> Result<(), &str> {
+    pub fn add_data(&mut self, data: impl AsRef<[u8]>) -> Result<(), MerkleTreeError> {
         let hash = MerkleTree::get_hash_of(&data);
         self.add_hash(hash)
     }
@@ -247,7 +280,7 @@ mod test {
     fn build_simple_tree() {
         let data = vec![[1; 32], [2; 32], [3; 32], [4; 32]];
 
-        let tree = MerkleTree::new_from_hashables(data);
+        let tree = MerkleTree::new_from_hashables(data).unwrap();
 
         println!("LEVEL 1: {:?}", tree.levels[0]);
         println!("LEVEL 2: {:?}", tree.levels[1]);
@@ -270,7 +303,7 @@ mod test {
     fn build_simple_tree_from_strings() {
         let data = vec!["something00", "something01", "something02", "something03"];
 
-        let tree = MerkleTree::new_from_hashables(data);
+        let tree = MerkleTree::new_from_hashables(data).unwrap();
 
         tree.print();
 
@@ -290,12 +323,12 @@ mod test {
             "something04",
         ];
 
-        let tree = MerkleTree::new_from_hashables(data);
+        let tree = MerkleTree::new_from_hashables(data).unwrap();
 
         let hash = MerkleTree::get_hash_of(&"something04");
         println!("HASH: {:?}", hash);
 
-        assert!(tree.verify_with_index(hash, 4));
+        assert!(tree.verify_with_index(&hash, 4));
         tree.print()
     }
 
@@ -336,11 +369,11 @@ mod test {
             "something031",
         ];
 
-        let tree = MerkleTree::new_from_hashables(data);
+        let tree = MerkleTree::new_from_hashables(data).unwrap();
 
         let hash = MerkleTree::get_hash_of(&"something017");
 
-        assert!(tree.verify_with_index(hash, 17));
+        assert!(tree.verify_with_index(&hash, 17));
 
         tree.print()
     }
@@ -382,11 +415,11 @@ mod test {
             "something031",
         ];
 
-        let tree = MerkleTree::new_from_hashables(data);
+        let tree = MerkleTree::new_from_hashables(data).unwrap();
 
         let hash = MerkleTree::get_hash_of(&"something017");
 
-        let proof = tree.proof_of_inclusion(hash).unwrap();
+        let proof = tree.proof_of_inclusion(&hash).unwrap();
 
         proof.print();
     }
@@ -429,11 +462,11 @@ mod test {
             "something031",
         ];
 
-        let tree = MerkleTree::new_from_hashables(data);
+        let tree = MerkleTree::new_from_hashables(data).unwrap();
 
         let hash = MerkleTree::get_hash_of(&"not in the tree");
 
-        let _proof = tree.proof_of_inclusion(hash).unwrap();
+        let _proof = tree.proof_of_inclusion(&hash).unwrap();
     }
 
     #[test]
@@ -458,16 +491,16 @@ mod test {
             "something016",
         ];
 
-        let mut tree = MerkleTree::new_from_hashables(data);
+        let mut tree = MerkleTree::new_from_hashables(data).unwrap();
         println!("TREE BEFORE ADDING:");
         tree.print();
 
         let new_data = MerkleTree::get_hash_of(&"something099");
         let _ = tree.add_hash(new_data.clone());
 
-        assert!(tree.verify(new_data.clone()));
+        assert!(tree.verify(&new_data));
 
-        let proof = tree.proof_of_inclusion(new_data).unwrap();
+        let proof = tree.proof_of_inclusion(&new_data).unwrap();
         println!("PROOF OF ADDED:");
         proof.print();
 
