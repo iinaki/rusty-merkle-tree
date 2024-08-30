@@ -90,8 +90,8 @@ impl CLI {
             Ok(cli) => match cli.cmd {
                 Commands::Create { path, hash } => self.handle_create_tree(path, hash),
                 Commands::Show => self.tree.print(),
-                Commands::Verify { elem, index } => self.handle_verify_inclusion(elem, index),
-                Commands::Proof { elem, index } => self.handle_proof_of_inclusion(elem, index),
+                Commands::Verify { elem, index } => self.handle_verify_inclusion(&elem, index),
+                Commands::Proof { elem, index } => self.handle_proof_of_inclusion(&elem, index),
                 Commands::Add { elem, hash } => self.handle_add_element(elem, hash),
                 Commands::Exit => {
                     println!("Exiting...");
@@ -147,14 +147,14 @@ impl CLI {
     }
 
     /// Handles the verification of the inclusion of an element in the Merkle Tree.
-    fn handle_verify_inclusion(&mut self, elem: String, index: Option<u32>) {
+    fn handle_verify_inclusion(&mut self, elem: &String, index: Option<u32>) {
         if let Some(index) = index {
-            if self.tree.verify_with_index(elem.clone(), index) {
+            if self.tree.verify_with_index(elem, index) {
                 println!("{:?} is included in the tree at index {}. Run the `proof` command to see its Proof of Inclusion", elem, index);
             } else {
                 println!("{:?} is not included in the tree at index {}.", elem, index);
             }
-        } else if self.tree.verify(elem.clone()) {
+        } else if self.tree.verify(elem) {
             println!("{:?} is included in the tree. Run the `proof` command to see its Proof of Inclusion.", elem);
         } else {
             println!("{:?} is not included in the tree.", elem);
@@ -162,9 +162,9 @@ impl CLI {
     }
 
     /// Handles the generation of the proof of inclusion of an element in the Merkle Tree.
-    fn handle_proof_of_inclusion(&mut self, elem: String, index: Option<u32>) {
+    fn handle_proof_of_inclusion(&mut self, elem: &String, index: Option<u32>) {
         if let Some(index) = index {
-            match self.tree.proof_of_inclusion_with_index(elem.clone(), index) {
+            match self.tree.proof_of_inclusion_with_index(elem, index) {
                 Ok(proof) => {
                     proof.print();
                 }
@@ -173,7 +173,7 @@ impl CLI {
                 }
             }
         } else {
-            match self.tree.proof_of_inclusion(elem.clone()) {
+            match self.tree.proof_of_inclusion(elem) {
                 Ok(proof) => {
                     proof.print();
                 }
@@ -188,7 +188,7 @@ impl CLI {
     /// The element can be added as a hash or as a string. The `--hash` flag is used to hash the element before adding it to the tree.
     fn handle_add_element(&mut self, elem: String, hash: bool) {
         if hash {
-            match self.tree.add_data(elem.clone()) {
+            match self.tree.add_data(&elem) {
                 Ok(_) => (),
                 Err(_) => {
                     println!("{} is already in the tree!", elem);
