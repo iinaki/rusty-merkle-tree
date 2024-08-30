@@ -4,36 +4,59 @@ use crate::merkle_tree::MerkleTree;
 use std::error::Error;
 use std::vec;
 
-#[derive(Parser)]
-#[command(disable_help_flag = true)]
-#[command(disable_help_subcommand = true)]
+#[derive(Parser, Debug)]
+#[command(name = "tree")]
 struct Args {
     #[command(subcommand)]
     cmd: Commands,
 }
 
-#[derive(Subcommand)]
+#[derive(Subcommand, Debug)]
 enum Commands {
+    /// Creates a new Merkle Tree from a file with elements.
+    /// If the `--hash` flag is present, the elements are hashed before being added to the tree.
     Create {
+        /// Path to the file containing the elements
         path: String,
+
+        /// Hash the elements before adding to the tree
         #[arg(long)]
         hash: bool,
     },
+
+    /// Shows the current state of the Merkle Tree.
     Show,
-    Help,
+
+    /// Verifies if an element is included in the Merkle Tree.
     Verify {
+        /// The element to verify
         elem: String,
+
+        /// Optionally provide the index for verification
         index: Option<u32>,
     },
+
+    /// Shows the proof of inclusion for an element.
     Proof {
+        /// The element to get proof of inclusion for
         elem: String,
+
+        /// Optionally provide the index for proof of inclusion
         index: Option<u32>,
     },
+
+    /// Adds an element to the Merkle Tree.
+    /// If the `--hash` flag is present, the element is hashed before being added to the tree.
     Add {
+        /// The element to add
         elem: String,
+
+        /// Hash the element before adding to the tree
         #[arg(long)]
         hash: bool,
     },
+
+    /// Exit the CLI
     Exit,
 }
 
@@ -63,11 +86,10 @@ impl CLI {
 
     /// Processes the input commands from the user and manages the CLI.
     fn manage_input(&mut self, commands: Vec<String>, running: &mut bool) {
-        match Args::try_parse_from(commands.iter()).map_err(|e| e.to_string()) {
+        match Args::try_parse_from(commands.iter()) {
             Ok(cli) => match cli.cmd {
                 Commands::Create { path, hash } => self.handle_create_tree(path, hash),
                 Commands::Show => self.tree.print(),
-                Commands::Help => CLI::print_help(),
                 Commands::Verify { elem, index } => self.handle_verify_inclusion(elem, index),
                 Commands::Proof { elem, index } => self.handle_proof_of_inclusion(elem, index),
                 Commands::Add { elem, hash } => self.handle_add_element(elem, hash),
@@ -76,33 +98,10 @@ impl CLI {
                     *running = false;
                 }
             },
-            Err(_) => {
-                println!("That's not a valid command - use the help command if you are stuck.")
+            Err(e) => {
+                println!("{}", e);
             }
         }
-    }
-
-    /// Prints the list of commands available in the CLI.
-    fn print_help() {
-        println!("COMMANDS \n");
-        println!("-- CREATE --");
-        println!("create <path/to/elements.txt> <-h>");
-        println!("- Creates a new Merkle Tree from a file with elements. If the -h flag is present, the elements are hashed before being added to the tree. \n");
-        println!("-- SHOW --");
-        println!("show");
-        println!("- Shows the current state of the Merkle Tree. \n");
-        println!("-- VERIFY --");
-        println!("verify <element>");
-        println!("- Verifies if an element is included in the tree. \n");
-        println!("-- PROOF --");
-        println!("proof <element>");
-        println!("- Shows the proof of inclusion for an element. \n");
-        println!("-- ADD --");
-        println!("add <element> <-h>");
-        println!("- Adds an element to the tree. If the -h flag is present, the element is hashed before being added to the tree. \n");
-        println!("-- EXIT --");
-        println!("exit");
-        println!("- Exits the program.")
     }
 
     /// Processes the file with the elements to be added to the Merkle Tree.
@@ -136,7 +135,7 @@ impl CLI {
         }
 
         println!(
-            "Merkle Tree created from file: {:?}, use 'show' to view te current tree.",
+            "Merkle Tree created from file: {:?}, use 'tree show' to view te current tree.",
             path
         );
     }
@@ -211,22 +210,18 @@ impl CLI {
         };
 
         let line = input.trim();
-        let mut args = match shlex::split(line).ok_or("error: Invalid quoting") {
+        match shlex::split(line).ok_or("error: Invalid quoting") {
             Ok(args) => args,
             Err(e) => {
                 println!("{}", e);
-                return vec![];
+                vec![]
             }
-        };
-
-        args.insert(0, "app".to_string());
-
-        args
+        }
     }
 
     /// Runs the CLI.
     pub fn run(&mut self) {
-        println!("Welcome to the Merkle Tree CLI, type 'help' to see the list of commands.");
+        println!("Welcome to the Merkle Tree CLI, type 'tree help' to see the list of commands.");
 
         let mut input = "".to_string();
         let mut running = true;
