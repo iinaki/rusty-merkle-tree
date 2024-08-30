@@ -29,12 +29,12 @@ impl MerkleTree {
 
     /// Creates a new MerkleTree from a list of objects that can be converted to byte slices (== that are hashable).
     pub fn new_from_hashables(data: Vec<impl AsRef<[u8]>>) -> Result<MerkleTree, MerkleTreeError> {
+        let mut hasher = Sha3_256::new();
         let hashes = data
             .iter()
             .map(|d| {
-                let mut hasher = Sha3_256::new();
                 hasher.update(d);
-                let result = hasher.finalize();
+                let result = hasher.finalize_reset();
                 MerkleTree::bytes_to_hex(&result)
             })
             .collect();
